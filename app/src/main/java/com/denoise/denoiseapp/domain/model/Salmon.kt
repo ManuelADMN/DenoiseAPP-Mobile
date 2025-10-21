@@ -18,10 +18,6 @@ data class Salmon(
     }
 
     companion object {
-        /**
-         * Crea un Salmon desde una probabilidad [0..1], con umbral (por defecto 0.5).
-         * prob >= umbral -> "INFECTADO", si no -> "SANO".
-         */
         fun desdeProbabilidad(prob: Double, umbral: Double = 0.5): Salmon {
             require(prob in 0.0..1.0) { "prob debe estar entre 0 y 1." }
             require(umbral in 0.0..1.0) { "umbral debe estar entre 0 y 1." }
