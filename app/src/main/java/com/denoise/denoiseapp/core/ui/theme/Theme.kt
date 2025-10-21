@@ -1,4 +1,4 @@
-package com.denoise.denoiseapp.ui.theme
+package com.denoise.denoiseapp.core.ui.theme
 
 import android.app.Activity
 import android.os.Build

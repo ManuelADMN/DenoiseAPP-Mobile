@@ -1,4 +1,4 @@
-package com.denoise.denoiseapp.ui.theme
+package com.denoise.denoiseapp.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
