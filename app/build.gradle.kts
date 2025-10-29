@@ -1,22 +1,32 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp") version "2.0.21-1.0.25"
+    id("com.google.devtools.ksp")
+    // 👇 habilita kotlinx-serialization para DTOs (Supabase usa serialization)
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
     namespace = "com.denoise.denoiseapp"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.denoise.denoiseapp"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Lee credenciales públicas desde local.properties (no se suben al repo)
+        val lp = gradleLocalProperties(rootDir)
+        val supabaseUrl = lp.getProperty("SUPABASE_URL") ?: ""
+        val supabaseAnon = lp.getProperty("SUPABASE_ANON_KEY") ?: ""
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnon\"")
     }
 
     buildTypes {
@@ -27,62 +37,75 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            // Útil si apuntas a entornos dev que usan HTTP:
+            // manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
 dependencies {
-    // --- Compose / Material 3 (ya usas BOM) ---
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    // ==== Supabase-kt (BOM) ====
+    val supabaseBom = platform("io.github.jan-tennert.supabase:bom:2.5.6")
+    implementation(supabaseBom)
+    implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    implementation("io.github.jan-tennert.supabase:auth-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation("io.github.jan-tennert.supabase:realtime-kt")
 
-    // --- Activity / Lifecycle (estado Compose) ---
-    implementation(libs.androidx.activity.compose)
+    // Ktor engine para Android (requerido por supabase-kt)
+    implementation("io.ktor:ktor-client-android:2.3.9")
+
+    // Serialización JSON para DTOs
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // ==== Tus dependencias existentes vía catálogo (ejemplos) ====
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-// --- Lifecycle / ViewModel para Compose ---
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-// --- Navigation Compose ---
-    implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
 
-// --- Room (con KSP) ---
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    // Room (si ya lo usas con KSP)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-// --- DataStore (flag semilla, si lo usas) ---
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Coil (si lo usas para imágenes)
+    implementation(libs.coil.compose)
 
-// --- Coil (imágenes / miniaturas) ---
-    implementation("io.coil-kt:coil-compose:2.7.0")
-
-// --- Accompanist (opcional: permisos / animaciones de navegación) ---
-    implementation("com.google.accompanist:accompanist-permissions:0.36.0")
-    implementation("com.google.accompanist:accompanist-navigation-animation:0.36.0")
-
-    implementation("androidx.compose.material:material-icons-extended")
-
-    // --- Tests base ---
+    // Test (opcional)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
