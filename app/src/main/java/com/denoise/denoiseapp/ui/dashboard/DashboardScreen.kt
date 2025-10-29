@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 data class DashboardUiState(
-    val totalReportes: Int = 0,
+    val totalReportes: Int = 1,
     val porcentajeInfectados: Int = 0, // 0..100
     val melanosis: Int = 0,
     val cracking: Int = 0,
