@@ -163,4 +163,3 @@ private fun ReportCard(rep: Reporte, onOpen: (String) -> Unit, onEdit: (String) 
         }
     }
 }
-//
