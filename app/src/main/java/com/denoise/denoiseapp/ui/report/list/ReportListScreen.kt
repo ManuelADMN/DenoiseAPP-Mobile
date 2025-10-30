@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.FilterList as FilterListIcon
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,7 +21,6 @@ import androidx.compose.runtime.collectAsState
 import com.denoise.denoiseapp.domain.model.Reporte
 import com.denoise.denoiseapp.domain.model.ReporteEstado
 import com.denoise.denoiseapp.presentation.report.ListViewModel
-import com.denoise.denoiseapp.presentation.report.ListUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +39,8 @@ fun ReportListScreen(
                 title = { Text("Órdenes Denoise") },
                 actions = {
                     IconButton(onClick = vm::toggleFiltros) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filtros")
+                        Icon(FilterListIcon, contentDescription = "Filtros")
+
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
@@ -49,7 +49,9 @@ fun ReportListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = null) }
+            FloatingActionButton(onClick = onAdd) {
+                Icon(Icons.Default.Add, contentDescription = "Nuevo reporte")
+            }
         }
     ) { pad ->
         Column(
@@ -74,7 +76,9 @@ fun ReportListScreen(
                         .padding(horizontal = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    EstadoFilterChip("Todos", state.filtroEstado == null) { vm.onEstadoChange(null) }
+                    EstadoFilterChip("Todos", state.filtroEstado == null) {
+                        vm.onEstadoChange(null)
+                    }
                     EstadoFilterChip("Pendiente", state.filtroEstado == ReporteEstado.PENDIENTE) {
                         vm.onEstadoChange(ReporteEstado.PENDIENTE)
                     }
@@ -90,21 +94,25 @@ fun ReportListScreen(
                 }
             }
 
-            if (state.loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+            when {
+                state.loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            } else if (state.items.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No hay reportes. Crea uno con el botón +")
+                state.items.isEmpty() -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No hay reportes. Crea uno con el botón +")
+                    }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(state.items, key = { it.id }) { rep ->
-                        ReportCard(rep, onOpen = onOpen, onEdit = onEdit)
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.items, key = { it.id }) { rep ->
+                            ReportCard(rep, onOpen = onOpen, onEdit = onEdit)
+                        }
                     }
                 }
             }

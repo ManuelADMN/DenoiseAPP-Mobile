@@ -1,11 +1,10 @@
+// app/src/main/java/com/denoise/denoiseapp/data/local/dao/ReportDao.kt
 package com.denoise.denoiseapp.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
 import com.denoise.denoiseapp.data.local.entity.ReportEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -19,7 +18,7 @@ interface ReportDao {
     fun getById(id: String): Flow<ReportEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(entity: ReportEntity)
+    suspend fun upsert(entity: ReportEntity): Long
 
     @Query("DELETE FROM reports WHERE id = :id")
     suspend fun deleteById(id: String)

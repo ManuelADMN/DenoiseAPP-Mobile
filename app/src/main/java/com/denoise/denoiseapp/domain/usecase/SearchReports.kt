@@ -1,43 +1,37 @@
 package com.denoise.denoiseapp.domain.usecase
 
-import com.denoise.denoiseapp.data.repository.ReportRepository
+import android.content.Context
+import com.denoise.denoiseapp.core.di.ServiceLocator
 import com.denoise.denoiseapp.domain.model.Reporte
 import com.denoise.denoiseapp.domain.model.ReporteEstado
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * Filtra reportes por texto (titulo/planta/lote/línea), estado y rango de fechas (creación).
+ * Búsqueda local (client-side) sobre la lista de Reportes.
+ * - query: busca en título, planta, lote, línea
+ * - estado: filtra por estado si no es null
  */
-class SearchReports(private val repo: ReportRepository) {
+class SearchReports(appContext: Context) {
+
+    private val getReports = ServiceLocator.provideGetReports(appContext)
 
     operator fun invoke(
-        query: String? = null,
-        estado: ReporteEstado? = null,
-        desdeMillis: Long? = null,
-        hastaMillis: Long? = null
+        query: String,
+        estado: ReporteEstado?
     ): Flow<List<Reporte>> {
-        val q = query?.trim().orEmpty().lowercase()
-        return repo.observarLista().map { list ->
-            list.filter { rep ->
-                val matchTexto = if (q.isEmpty()) true else {
-                    val texto = buildString {
-                        append(rep.titulo)
-                        append(' ')
-                        append(rep.planta.nombre)
-                        rep.lote?.let { append(' '); append(it) }
-                        rep.linea?.let { append(' '); append(it) }
-                    }.lowercase()
-                    texto.contains(q)
-                }
-                val matchEstado = estado?.let { rep.estado == it } ?: true
-                val matchFecha = run {
-                    val f = rep.fechaCreacionMillis
-                    val dOk = desdeMillis?.let { f >= it } ?: true
-                    val hOk = hastaMillis?.let { f <= it } ?: true
-                    dOk && hOk
-                }
-                matchTexto && matchEstado && matchFecha
+        val q = query.trim().lowercase()
+        return getReports().map { base ->
+            base.filter { r ->
+                val matchQ =
+                    if (q.isBlank()) true
+                    else r.titulo.lowercase().contains(q) ||
+                            r.planta.nombre.lowercase().contains(q) ||
+                            (r.lote?.lowercase()?.contains(q) == true) ||
+                            (r.linea?.lowercase()?.contains(q) == true)
+
+                val matchEstado = estado?.let { r.estado == it } ?: true
+                matchQ && matchEstado
             }
         }
     }

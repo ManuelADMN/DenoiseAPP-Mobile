@@ -1,9 +1,9 @@
 [versions]
 # Plugins / toolchain
 agp = "8.13.0"
-kotlin = "2.2.20"
+kotlin = "2.0.21"           # ← cambio clave
 
-# Jetpack Compose (solo BOM; los artefactos no llevan versión)
+# Jetpack Compose (BOM)
 compose-bom = "2024.09.00"
 
 # AndroidX base
@@ -11,7 +11,10 @@ coreKtx = "1.13.1"
 lifecycle = "2.8.6"
 activityCompose = "1.9.2"
 navigation = "2.7.7"
+
+# Room estable
 room = "2.6.1"
+
 coil = "2.6.0"
 
 # Tests
@@ -43,7 +46,7 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 # Navigation
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 
-# Room
+# Room (estable)
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
@@ -58,6 +61,6 @@ androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-# Con Kotlin 2.x, este plugin ya incluye el compilador de Compose (no fijes compose-compiler manualmente).
-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-android       = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

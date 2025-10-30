@@ -1,12 +1,13 @@
-// app/build.gradle.kts
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.kotlin.serialization)
+
+    // KSP (versión que SÍ existe para Kotlin 2.0.21)
+    id("com.google.devtools.ksp") version "2.0.21-1.0.27"
 }
 
 android {
@@ -20,18 +21,10 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Lee credenciales públicas desde local.properties / gradle.properties / env
+        // Si NO usas Supabase, puedes borrar todo este bloque:
         val lp = gradleLocalProperties(rootDir, providers)
-        val supabaseUrl = lp.getProperty("SUPABASE_URL")
-            ?: providers.gradleProperty("SUPABASE_URL").orNull
-            ?: providers.environmentVariable("SUPABASE_URL").orNull
-            ?: ""
-        val supabaseAnon = lp.getProperty("SUPABASE_ANON_KEY")
-            ?: providers.gradleProperty("SUPABASE_ANON_KEY").orNull
-            ?: providers.environmentVariable("SUPABASE_ANON_KEY").orNull
-            ?: ""
-
-        // 👇 Nombres correctos de las constantes en BuildConfig (no pongas la URL aquí)
+        val supabaseUrl = lp.getProperty("SUPABASE_URL") ?: ""
+        val supabaseAnon = lp.getProperty("SUPABASE_ANON_KEY") ?: ""
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnon\"")
     }
@@ -47,40 +40,34 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions { jvmTarget = "17" }
 
     buildFeatures {
         compose = true
         buildConfig = true
     }
 
-    // ❌ Quita la línea con libs.versions.compose.compiler.get():
-    // composeOptions { kotlinCompilerExtensionVersion = ... }
-    // El plugin Compose ya fija la versión del compiler.
+    packaging {
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+}
 
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+// Parámetros de Room para KSP
+ksp {
+    arg("room.generateKotlin", "true")
+    arg("room.incremental", "true")
 }
 
 dependencies {
-    // ===== Supabase-kt 3.x (usa BOM para alinear módulos) =====
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.3.1"))
-    implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    implementation("io.github.jan-tennert.supabase:auth-kt")
-    implementation("io.github.jan-tennert.supabase:storage-kt")
-    implementation("io.github.jan-tennert.supabase:realtime-kt")
+    // ===== Room estable + KSP =====
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-    // Ktor 3 para Android + WebSockets (Realtime los usa)  ✅
-    implementation("io.ktor:ktor-client-okhttp:3.3.1")
-    implementation("io.ktor:ktor-client-websockets:3.3.1")
-
-    // JSON (kotlinx-serialization)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
-    // ===== Tu stack del catálogo =====
+    // ===== Tu stack Compose del catálogo =====
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -93,12 +80,14 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
 
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-
     implementation(libs.coil.compose)
+    implementation("androidx.compose.material:material-icons-extended")
 
+
+    // JSON (si lo usas)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
     // Tests

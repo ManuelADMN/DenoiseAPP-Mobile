@@ -4,8 +4,8 @@ import com.denoise.denoiseapp.domain.model.Reporte
 import kotlinx.coroutines.flow.Flow
 
 interface ReportRepository {
-    fun observarLista(): Flow<List<Reporte>>
-    fun obtenerPorId(id: String): Flow<Reporte?>
-    suspend fun guardar(reporte: Reporte)
-    suspend fun eliminar(id: String)
+    fun observeAll(): Flow<List<Reporte>>
+    fun observeById(id: String): Flow<Reporte?>
+    suspend fun upsert(reporte: Reporte)
+    suspend fun deleteById(id: String)
 }

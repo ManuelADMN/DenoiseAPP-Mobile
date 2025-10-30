@@ -1,8 +1,9 @@
 pluginManagement {
     repositories {
-        google()
+        google()          // ← debe ir primero
         mavenCentral()
         gradlePluginPortal()
+        maven("https://plugins.gradle.org/m2/")
     }
 }
 
