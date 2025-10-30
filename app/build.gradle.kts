@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
-    // Necesario para supabase-kt (usa kotlinx-serialization por defecto)
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
@@ -21,7 +20,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Lee las credenciales públicas (no las subas al repo)
+        // Lee credenciales públicas desde local.properties / gradle.properties / env
         val lp = gradleLocalProperties(rootDir, providers)
         val supabaseUrl = lp.getProperty("SUPABASE_URL")
             ?: providers.gradleProperty("SUPABASE_URL").orNull
@@ -32,8 +31,9 @@ android {
             ?: providers.environmentVariable("SUPABASE_ANON_KEY").orNull
             ?: ""
 
-        buildConfigField("String", "https://emszmcrrhfjnszqmgsdo.supabase.co", "\"$supabaseUrl\"")
-        buildConfigField("String", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtc3ptY3JyaGZqbnN6cW1nc2RvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3NjQxMDAsImV4cCI6MjA3NzM0MDEwMH0.Tq7JrDKFPlGSFXBej0vmvYYvbli-CoAap0Mo7INykpM", "\"$supabaseAnon\"")
+        // 👇 Nombres correctos de las constantes en BuildConfig (no pongas la URL aquí)
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnon\"")
     }
 
     buildTypes {
@@ -46,7 +46,6 @@ android {
         }
     }
 
-    // Recomendado si minSdk < 26 (ver docs de supabase-kt)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -58,31 +57,30 @@ android {
         compose = true
         buildConfig = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
 
-    packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    }
+    // ❌ Quita la línea con libs.versions.compose.compiler.get():
+    // composeOptions { kotlinCompilerExtensionVersion = ... }
+    // El plugin Compose ya fija la versión del compiler.
+
+    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
 dependencies {
-    // ===== Supabase-kt (BOM 3.x) =====
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.5"))
+    // ===== Supabase-kt 3.x (usa BOM para alinear módulos) =====
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.3.1"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
 
-    // Ktor 3 para Android + WebSockets (necesario para Realtime)
-    implementation("io.ktor:ktor-client-okhttp:3.0.3")
-    implementation("io.ktor:ktor-client-websockets:3.0.3")
+    // Ktor 3 para Android + WebSockets (Realtime los usa)  ✅
+    implementation("io.ktor:ktor-client-okhttp:3.3.1")
+    implementation("io.ktor:ktor-client-websockets:3.3.1")
 
     // JSON (kotlinx-serialization)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // ===== Tu stack existente (catálogo) =====
+    // ===== Tu stack del catálogo =====
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -101,7 +99,6 @@ dependencies {
 
     implementation(libs.coil.compose)
 
-    // Desugaring (porque minSdk = 24)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
     // Tests
