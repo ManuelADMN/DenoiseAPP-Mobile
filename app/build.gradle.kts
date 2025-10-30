@@ -12,12 +12,12 @@ plugins {
 
 android {
     namespace = "com.denoise.denoiseapp"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.denoise.denoiseapp"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
