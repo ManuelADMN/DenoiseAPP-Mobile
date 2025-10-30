@@ -84,6 +84,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
 
+
     // JSON (si lo usas)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 

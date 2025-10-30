@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FilterList as FilterListIcon
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -39,9 +39,13 @@ fun ReportListScreen(
                 title = { Text("Órdenes Denoise") },
                 actions = {
                     IconButton(onClick = vm::toggleFiltros) {
-                        Icon(FilterListIcon, contentDescription = "Filtros")
-
+                        Icon(
+                            imageVector = Icons.Filled.FilterList,
+                            contentDescription = "Filtros"
+                        )
                     }
+
+
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
                     }
