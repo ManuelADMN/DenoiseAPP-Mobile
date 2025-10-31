@@ -65,6 +65,7 @@ dependencies {
     // ===== Room estable + KSP =====
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.compose.ui.unit)
     ksp(libs.androidx.room.compiler)
 
     // ===== Tu stack Compose del catálogo =====
@@ -81,7 +82,10 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.coil.compose)
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-extended:<versión>")
+    implementation("androidx.compose.material3:material3:<última>")
+    implementation("androidx.compose.material:material-icons-extended:<última>")
+
 
 
 
