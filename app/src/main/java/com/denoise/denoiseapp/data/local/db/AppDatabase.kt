@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.denoise.denoiseapp.data.local.dao.ReportDao
 import com.denoise.denoiseapp.data.local.entity.ReportEntity
@@ -14,7 +15,7 @@ import java.util.UUID
 
 @Database(
     entities = [ReportEntity::class],
-    version = 1,
+    version = 2,                // ⬅️ subimos versión
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,10 +32,21 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "denoise_db"
                 )
+                    .addMigrations(MIGRATION_1_2)         // ⬅️ registramos migración
                     .addCallback(seedCallback(context.applicationContext))
                     .build()
                     .also { INSTANCE = it }
             }
+
+        /** Migración 1 -> 2: agrega columnas con default 0 */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE reports ADD COLUMN porcentajeInfectados INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE reports ADD COLUMN melanosis INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE reports ADD COLUMN cracking INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE reports ADD COLUMN gaping INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         private fun seedCallback(appContext: Context) = object : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
@@ -46,6 +58,12 @@ abstract class AppDatabase : RoomDatabase() {
                     if (dao.count() == 0) {
                         val now = System.currentTimeMillis()
                         val demo = (1..12).map { idx ->
+                            // Distribución simple para que veas valores distintos
+                            val pInf = listOf(0, 12, 25, 33, 45, 50, 60, 72, 80, 90, 100, 15)[(idx - 1) % 12]
+                            val mel = (idx % 5)
+                            val cra = (idx % 3)
+                            val gap = (idx % 4)
+
                             ReportEntity(
                                 id = UUID.randomUUID().toString(),
                                 titulo = "Inspección Lote ${1000 + idx}",
@@ -53,14 +71,18 @@ abstract class AppDatabase : RoomDatabase() {
                                 plantaNombre = listOf("Puerto Montt", "Quellón", "Castro")[(idx - 1) % 3],
                                 linea = "Línea ${(idx % 4) + 1}",
                                 lote = "L${200 + idx}",
-                                estado = listOf("PENDIENTE","EN_PROCESO","QA","FINALIZADO")[idx % 4],
+                                estado = listOf("PENDIENTE","EN_PROCESO","CERRADO","EN_PROCESO")[idx % 4],
                                 fechaCreacionMillis = now - idx * 86_400_000L,
                                 fechaObjetivoMillis = if (idx % 3 == 0) now + idx * 86_400_000L else null,
                                 notas = if (idx % 2 == 0) "Revisión visual y captura de evidencias." else null,
                                 evidenciasCount = idx % 5,
                                 creadoPor = "operario${idx}@denoise.com",
                                 asignadoA = if (idx % 2 == 1) "tecnico${idx}@denoise.com" else null,
-                                ultimaActualizacionMillis = now - idx * 43_200_000L
+                                ultimaActualizacionMillis = now - idx * 43_200_000L,
+                                porcentajeInfectados = pInf,
+                                melanosis = mel,
+                                cracking = cra,
+                                gaping = gap
                             )
                         }
                         demo.forEach { dao.upsert(it) }

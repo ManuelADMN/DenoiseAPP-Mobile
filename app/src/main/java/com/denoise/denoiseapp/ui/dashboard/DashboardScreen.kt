@@ -3,24 +3,19 @@
 package com.denoise.denoiseapp.ui.dashboard
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.denoise.denoiseapp.core.util.connectivity.rememberConnectivityState
+import com.denoise.denoiseapp.domain.model.Reporte
+import com.denoise.denoiseapp.presentation.dashboard.DashboardViewModel
 import com.denoise.denoiseapp.ui.components.ConnectivityBanner
 
 data class DashboardUiState(
     val totalReportes: Int = 0,
-    val porcentajeInfectados: Int = 0, // 0..100
+    val porcentajeInfectados: Int = 0,
     val melanosis: Int = 0,
     val cracking: Int = 0,
     val gaping: Int = 0
@@ -30,9 +25,16 @@ data class DashboardUiState(
 fun DashboardScreen(
     onIrALista: () -> Unit,
     onOpenSettings: () -> Unit = {},
-    onOpenDashboard: () -> Unit = {}, // compatibilidad
+    onOpenDashboard: () -> Unit = {},
     state: DashboardUiState = DashboardUiState()
 ) {
+    val vm: DashboardViewModel = viewModel()
+    val repoState by vm.state.collectAsState()
+
+    val liveState = remember(repoState.items, repoState.loading) {
+        if (repoState.loading) state else mapToLegacyStateFromFields(repoState.items)
+    }
+
     val isOnline by rememberConnectivityState()
 
     Scaffold(
@@ -42,93 +44,52 @@ fun DashboardScreen(
                 actions = { TextButton(onClick = onOpenSettings) { Text("Ajustes") } }
             )
         }
-        // Sin bottomBar: la barra de navegación vive en AppNavGraph para ser persistente
     ) { padding ->
-        Column(
-            Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            // Banner de conectividad (recurso nativo #2)
+        Column(Modifier.padding(padding).fillMaxSize()) {
             ConnectivityBanner(isOnline = isOnline)
-
-            Column(
-                Modifier
-                    .padding(16.dp)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Resumen operacional", style = MaterialTheme.typography.titleMedium)
 
-                // Fila 1: total reportes + % infectados
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    KpiCard(
-                        title = "Reportes",
-                        value = state.totalReportes.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "% Infectados",
-                        value = "${state.porcentajeInfectados}%",
-                        modifier = Modifier.weight(1f)
-                    )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    KpiCard("Reportes", liveState.totalReportes.toString(), Modifier.weight(1f))
+                    KpiCard("% Infectados", "${liveState.porcentajeInfectados}%", Modifier.weight(1f))
                 }
 
-                // Fila 2: melanosis / cracking / gaping
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    KpiCard(
-                        title = "Melanosis",
-                        value = state.melanosis.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Cracking",
-                        value = state.cracking.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "Gaping",
-                        value = state.gaping.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    KpiCard("Melanosis", "${liveState.melanosis}%", Modifier.weight(1f))
+                    KpiCard("Cracking",  "${liveState.cracking}%",  Modifier.weight(1f))
+                    KpiCard("Gaping",    "${liveState.gaping}%",    Modifier.weight(1f))
                 }
 
                 Spacer(Modifier.height(16.dp))
-
-                Button(onClick = onIrALista) {
-                    Text("Ver Órdenes / Reportes")
-                }
+                Button(onClick = onIrALista) { Text("Ver Órdenes / Reportes") }
             }
         }
     }
 }
 
 @Composable
-private fun KpiCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
+private fun KpiCard(title: String, value: String, modifier: Modifier = Modifier) {
     ElevatedCard(modifier = modifier) {
-        Column(
-            Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineSmall
-            )
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.headlineSmall)
         }
     }
+}
+
+private fun mapToLegacyStateFromFields(reportes: List<Reporte>): DashboardUiState {
+    if (reportes.isEmpty()) return DashboardUiState()
+    val total = reportes.size
+
+    fun avg(selector: (Reporte) -> Int): Int =
+        reportes.map { selector(it).coerceIn(0, 100) }.average().toInt().coerceIn(0, 100)
+
+    return DashboardUiState(
+        totalReportes = total,
+        porcentajeInfectados = avg { it.porcentajeInfectados },
+        melanosis = avg { it.melanosis },
+        cracking = avg { it.cracking },
+        gaping = avg { it.gaping }
+    )
 }

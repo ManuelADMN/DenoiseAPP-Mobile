@@ -5,23 +5,43 @@ import com.denoise.denoiseapp.domain.model.Planta
 import com.denoise.denoiseapp.domain.model.Reporte
 import com.denoise.denoiseapp.domain.model.ReporteEstado
 
-fun ReportEntity.toDomain() = Reporte(
-    id = id,
-    titulo = titulo,
-    planta = Planta(id = plantaId, nombre = plantaNombre),
-    linea = linea,
-    lote = lote,
-    estado = ReporteEstado.valueOf(estado),
+private fun clampPct(v: Int?): Int = (v ?: 0).coerceIn(0, 100)
+private fun safeEstado(s: String?): ReporteEstado =
+    runCatching { ReporteEstado.valueOf(s ?: "PENDIENTE") }
+        .getOrElse { ReporteEstado.PENDIENTE }
+
+private fun safeStr(s: String?, fallback: String) = s?.takeIf { it.isNotBlank() } ?: fallback
+
+/* ------------- ENTITY -> DOMAIN (a prueba de datos viejos) ------------- */
+fun ReportEntity.toDomain(): Reporte = Reporte(
+    id = safeStr(id, java.util.UUID.randomUUID().toString()),
+    titulo = safeStr(titulo, "Reporte sin título"),
+    planta = Planta(
+        id = safeStr(plantaId, "PL-UNK"),
+        nombre = safeStr(plantaNombre, "Desconocida")
+    ),
+    linea = linea?.takeIf { it.isNotBlank() },
+    lote  = lote?.takeIf { it.isNotBlank() },
+    estado = safeEstado(estado),
+
     fechaCreacionMillis = fechaCreacionMillis,
     fechaObjetivoMillis = fechaObjetivoMillis,
-    notas = notas,
-    evidencias = emptyList(), // ajusta cuando tengas tabla Evidencias
+    notas = notas?.takeIf { it.isNotBlank() },
+
+    // % (0..100)
+    porcentajeInfectados = clampPct(porcentajeInfectados),
+    melanosis            = clampPct(melanosis),
+    cracking             = clampPct(cracking),
+    gaping               = clampPct(gaping),
+
+    evidencias = emptyList(),
     creadoPor = creadoPor,
     asignadoA = asignadoA,
     ultimaActualizacionMillis = ultimaActualizacionMillis
 )
 
-fun Reporte.toEntity() = ReportEntity(
+/* ------------- DOMAIN -> ENTITY (también clampa) ------------- */
+fun Reporte.toEntity(): ReportEntity = ReportEntity(
     id = id,
     titulo = titulo,
     plantaId = planta.id,
@@ -35,5 +55,9 @@ fun Reporte.toEntity() = ReportEntity(
     evidenciasCount = evidencias.size,
     creadoPor = creadoPor,
     asignadoA = asignadoA,
-    ultimaActualizacionMillis = ultimaActualizacionMillis
+    ultimaActualizacionMillis = ultimaActualizacionMillis,
+    porcentajeInfectados = clampPct(porcentajeInfectados),
+    melanosis            = clampPct(melanosis),
+    cracking             = clampPct(cracking),
+    gaping               = clampPct(gaping)
 )

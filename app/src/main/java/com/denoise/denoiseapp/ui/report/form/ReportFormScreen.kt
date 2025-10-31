@@ -3,6 +3,7 @@ package com.denoise.denoiseapp.ui.report.form
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.denoise.denoiseapp.presentation.report.FormViewModel
@@ -43,9 +45,7 @@ fun ReportFormScreen(
                         onSaved()
                     }
                 }
-            ) {
-                Text("Guardar")
-            }
+            ) { Text("Guardar") }
         }
     ) { padding ->
         Column(
@@ -57,7 +57,7 @@ fun ReportFormScreen(
         ) {
             OutlinedTextField(
                 value = state.titulo,
-                onValueChange = { vm.onTituloChange(it) },
+                onValueChange = vm::onTituloChange,
                 label = { Text("Título *") },
                 isError = state.error != null && state.titulo.isBlank(),
                 supportingText = {
@@ -70,7 +70,7 @@ fun ReportFormScreen(
 
             OutlinedTextField(
                 value = state.plantaNombre,
-                onValueChange = { vm.onPlantaChange(it) },
+                onValueChange = vm::onPlantaChange,
                 label = { Text("Planta *") },
                 isError = state.error != null && state.plantaNombre.isBlank(),
                 supportingText = {
@@ -83,47 +83,96 @@ fun ReportFormScreen(
 
             OutlinedTextField(
                 value = state.linea,
-                onValueChange = { vm.onLineaChange(it) },
+                onValueChange = vm::onLineaChange,
                 label = { Text("Línea (opcional)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
                 value = state.lote,
-                onValueChange = { vm.onLoteChange(it) },
+                onValueChange = vm::onLoteChange,
                 label = { Text("Lote (opcional)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
                 value = state.notas,
-                onValueChange = { vm.onNotasChange(it) },
+                onValueChange = vm::onNotasChange,
                 label = { Text("Notas (opcional)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             HorizontalDivider()
 
-            Text(
-                text = "Evidencias (prototipo)",
-                style = MaterialTheme.typography.titleMedium
-            )
+            Text("Métricas de calidad (Dashboard)", style = MaterialTheme.typography.titleMedium)
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = state.porcentajeInfectados,
+                    onValueChange = vm::onPorcentajeChange,
+                    label = { Text("% Infectados (0–100)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = state.porcentajeInfectados.toIntOrNull()?.let { it !in 0..100 } == true,
+                    supportingText = {
+                        if (state.porcentajeInfectados.toIntOrNull()?.let { it !in 0..100 } == true)
+                            Text("Debe ser 0–100", color = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = state.melanosis,
+                    onValueChange = vm::onMelanosisChange,
+                    label = { Text("Melanosis (0–100)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = state.melanosis.toIntOrNull()?.let { it !in 0..100 } == true,
+                    supportingText = {
+                        if (state.melanosis.toIntOrNull()?.let { it !in 0..100 } == true)
+                            Text("Debe ser 0–100", color = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = state.cracking,
+                    onValueChange = vm::onCrackingChange,
+                    label = { Text("Cracking (0–100)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = state.cracking.toIntOrNull()?.let { it !in 0..100 } == true,
+                    supportingText = {
+                        if (state.cracking.toIntOrNull()?.let { it !in 0..100 } == true)
+                            Text("Debe ser 0–100", color = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = state.gaping,
+                    onValueChange = vm::onGapingChange,
+                    label = { Text("Gaping (0–100)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = state.gaping.toIntOrNull()?.let { it !in 0..100 } == true,
+                    supportingText = {
+                        if (state.gaping.toIntOrNull()?.let { it !in 0..100 } == true)
+                            Text("Debe ser 0–100", color = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            HorizontalDivider()
+
+            Text("Evidencias (prototipo)", style = MaterialTheme.typography.titleMedium)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(listOf<String>()) { uri ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(96.dp))
                     }
                 }
             }
 
             Spacer(Modifier.height(32.dp))
-            Text(
-                text = "Campos con * son obligatorios",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text("Campos con * son obligatorios", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

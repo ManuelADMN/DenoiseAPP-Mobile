@@ -18,11 +18,25 @@ data class FormUiState(
     val lote: String = "",
     val estado: ReporteEstado = ReporteEstado.PENDIENTE,
     val notas: String = "",
-    val fechaCreacionMillis: Long? = null, // conservar al editar
+    val fechaCreacionMillis: Long? = null,
+
+    // Porcentajes (como texto para validar)
+    val porcentajeInfectados: String = "0",
+    val melanosis: String = "0",
+    val cracking: String = "0",
+    val gaping: String = "0",
+
     val guardando: Boolean = false,
     val error: String? = null,
 ) {
-    val esValido: Boolean get() = titulo.isNotBlank() && plantaNombre.isNotBlank()
+    private fun pctOk(s: String) = s.toIntOrNull()?.let { it in 0..100 } == true
+    val esValido: Boolean
+        get() = titulo.isNotBlank() &&
+                plantaNombre.isNotBlank() &&
+                pctOk(porcentajeInfectados) &&
+                pctOk(melanosis) &&
+                pctOk(cracking) &&
+                pctOk(gaping)
 }
 
 class FormViewModel(app: Application): AndroidViewModel(app) {
@@ -45,7 +59,11 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                         lote = it.lote.orEmpty(),
                         estado = it.estado,
                         notas = it.notas.orEmpty(),
-                        fechaCreacionMillis = it.fechaCreacionMillis
+                        fechaCreacionMillis = it.fechaCreacionMillis,
+                        porcentajeInfectados = it.porcentajeInfectados.toString(),
+                        melanosis = it.melanosis.toString(),
+                        cracking = it.cracking.toString(),
+                        gaping = it.gaping.toString()
                     )
                 }
             }
@@ -59,12 +77,25 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
     fun onNotasChange(v: String) { ui.value = ui.value.copy(notas = v) }
     fun onEstadoChange(v: ReporteEstado) { ui.value = ui.value.copy(estado = v) }
 
+    private fun cleanPct(v: String) = v.filter { it.isDigit() }.take(3)
+    fun onPorcentajeChange(v: String) { ui.value = ui.value.copy(porcentajeInfectados = cleanPct(v)) }
+    fun onMelanosisChange(v: String)  { ui.value = ui.value.copy(melanosis = cleanPct(v)) }
+    fun onCrackingChange(v: String)   { ui.value = ui.value.copy(cracking = cleanPct(v)) }
+    fun onGapingChange(v: String)     { ui.value = ui.value.copy(gaping = cleanPct(v)) }
+
     fun guardar(onSuccess: (String) -> Unit) {
         val s = ui.value
-        if (!s.esValido) {
-            ui.value = s.copy(error = "Completa título y planta")
+        val p = s.porcentajeInfectados.toIntOrNull() ?: -1
+        val m = s.melanosis.toIntOrNull() ?: -1
+        val c = s.cracking.toIntOrNull() ?: -1
+        val g = s.gaping.toIntOrNull() ?: -1
+
+        val allOk = listOf(p, m, c, g).all { it in 0..100 }
+        if (!s.esValido || !allOk) {
+            ui.value = s.copy(error = "Ingresa porcentajes válidos entre 0 y 100.")
             return
         }
+
         viewModelScope.launch {
             ui.value = ui.value.copy(guardando = true, error = null)
             val id = s.id ?: UUID.randomUUID().toString()
@@ -76,9 +107,13 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                 lote = s.lote.ifBlank { null },
                 estado = s.estado,
                 notas = s.notas.ifBlank { null },
-                fechaCreacionMillis = s.fechaCreacionMillis ?: System.currentTimeMillis(), // correcto
+                fechaCreacionMillis = s.fechaCreacionMillis ?: System.currentTimeMillis(),
                 fechaObjetivoMillis = null,
                 ultimaActualizacionMillis = System.currentTimeMillis(),
+                porcentajeInfectados = p.coerceIn(0, 100),
+                melanosis = m.coerceIn(0, 100),
+                cracking = c.coerceIn(0, 100),
+                gaping = g.coerceIn(0, 100),
                 evidencias = emptyList(),
                 creadoPor = null,
                 asignadoA = null

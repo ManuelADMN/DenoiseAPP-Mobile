@@ -20,9 +20,17 @@ data class Reporte(
     val linea: String? = null,
     val lote: String? = null,
     val estado: ReporteEstado = ReporteEstado.PENDIENTE,
+
     val fechaCreacionMillis: Long = System.currentTimeMillis(),
     val fechaObjetivoMillis: Long? = null,
     val notas: String? = null,
+
+    // Porcentajes 0..100 (TODOS)
+    val porcentajeInfectados: Int = 0,
+    val melanosis: Int = 0,
+    val cracking: Int = 0,
+    val gaping: Int = 0,
+
     val evidencias: List<Evidencia> = emptyList(),
     val creadoPor: String? = null,
     val asignadoA: String? = null,
@@ -31,16 +39,17 @@ data class Reporte(
     init {
         require(titulo.isNotBlank()) { "El título no puede estar vacío." }
         require(planta.id.isNotBlank() && planta.nombre.isNotBlank()) { "La planta no puede estar vacía." }
+        fun pctOk(v: Int) = v in 0..100
+        require(pctOk(porcentajeInfectados) && pctOk(melanosis) && pctOk(cracking) && pctOk(gaping)) {
+            "Los porcentajes deben estar entre 0 y 100."
+        }
     }
 
     fun conEstado(nuevo: ReporteEstado): Reporte =
         copy(estado = nuevo, ultimaActualizacionMillis = System.currentTimeMillis())
 
     fun agregarEvidencia(e: Evidencia): Reporte =
-        copy(
-            evidencias = evidencias + e,
-            ultimaActualizacionMillis = System.currentTimeMillis()
-        )
+        copy(evidencias = evidencias + e, ultimaActualizacionMillis = System.currentTimeMillis())
 
     fun actualizarNotas(nuevasNotas: String?): Reporte =
         copy(notas = nuevasNotas, ultimaActualizacionMillis = System.currentTimeMillis())

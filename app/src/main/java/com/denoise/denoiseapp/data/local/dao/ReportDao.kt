@@ -1,4 +1,3 @@
-// app/src/main/java/com/denoise/denoiseapp/data/local/dao/ReportDao.kt
 package com.denoise.denoiseapp.data.local.dao
 
 import androidx.room.Dao
