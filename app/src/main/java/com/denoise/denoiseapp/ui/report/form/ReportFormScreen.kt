@@ -1,9 +1,5 @@
 package com.denoise.denoiseapp.ui.report.form
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -12,7 +8,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,13 +15,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.denoise.denoiseapp.presentation.report.FormViewModel
@@ -34,42 +25,20 @@ import com.denoise.denoiseapp.presentation.report.FormViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportFormScreen(
-    vm: FormViewModel,   // mantenemos la firma
+    vm: FormViewModel,
     onSaved: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
-
-    // Estado local (independiente del VM para evitar incompatibilidades)
-    var titulo by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
-    var planta by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
-    var notas  by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
-
-    var errorTitulo by rememberSaveable { mutableStateOf<String?>(null) }
-    var errorPlanta by rememberSaveable { mutableStateOf<String?>(null) }
-
-    var evidencias by rememberSaveable { mutableStateOf<List<Uri>>(emptyList()) }
-
-    // Photo Picker (estable)
-    val pickMedia = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
-    ) { uris ->
-        evidencias = uris ?: emptyList()
-    }
+    val state by vm.ui
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Nuevo Reporte") }) },
+        topBar = {
+            TopAppBar(title = { Text(if (state.id == null) "Nuevo reporte" else "Editar reporte") })
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
-                    // Validación mínima
-                    errorTitulo = if (titulo.text.isBlank()) "El título es obligatorio" else null
-                    errorPlanta = if (planta.text.isBlank()) "La planta es obligatoria" else null
-
-
-                    if (errorTitulo == null && errorPlanta == null) {
-                        // (Opcional) Si tu VM tiene guardar(...), llama aquí:
-                        // vm.guardar(titulo.text, planta.text, notas.text, evidencias)
-
+                    vm.guardar {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onSaved()
                     }
@@ -87,69 +56,64 @@ fun ReportFormScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OutlinedTextField(
-                value = titulo,
-                onValueChange = {
-                    titulo = it
-                    if (errorTitulo != null && it.text.isNotBlank()) errorTitulo = null
-                },
+                value = state.titulo,
+                onValueChange = { vm.onTituloChange(it) },
                 label = { Text("Título *") },
-                isError = errorTitulo != null,
+                isError = state.error != null && state.titulo.isBlank(),
                 supportingText = {
-                    errorTitulo?.let { msg ->
-                        Text(msg, color = MaterialTheme.colorScheme.error)
+                    if (state.error != null && state.titulo.isBlank()) {
+                        Text(state.error ?: "", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                value = planta,
-                onValueChange = {
-                    planta = it
-                    if (errorPlanta != null && it.text.isNotBlank()) errorPlanta = null
-                },
+                value = state.plantaNombre,
+                onValueChange = { vm.onPlantaChange(it) },
                 label = { Text("Planta *") },
-                isError = errorPlanta != null,
+                isError = state.error != null && state.plantaNombre.isBlank(),
                 supportingText = {
-                    errorPlanta?.let { msg ->
-                        Text(msg, color = MaterialTheme.colorScheme.error)
+                    if (state.error != null && state.plantaNombre.isBlank()) {
+                        Text(state.error ?: "", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
-                value = notas,
-                onValueChange = { notas = it },
-                label = { Text("Notas") },
+                value = state.linea,
+                onValueChange = { vm.onLineaChange(it) },
+                label = { Text("Línea (opcional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = state.lote,
+                onValueChange = { vm.onLoteChange(it) },
+                label = { Text("Lote (opcional)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = state.notas,
+                onValueChange = { vm.onNotasChange(it) },
+                label = { Text("Notas (opcional)") },
                 modifier = Modifier.fillMaxWidth()
             )
 
             HorizontalDivider()
 
-            Text("Evidencias (opcional)")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = {
-                    pickMedia.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                    )
-                }) { Text("Agregar evidencias") }
-
-                if (evidencias.isNotEmpty()) {
-                    Text("${evidencias.size} seleccionadas", color = MaterialTheme.colorScheme.primary)
-                }
-            }
-
-            if (evidencias.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(evidencias) { uri ->
-                        Card(
-                            modifier = Modifier.size(80.dp),
-                            elevation = CardDefaults.cardElevation(2.dp)
-                        ) {
-                            AsyncImage(model = uri, contentDescription = "Evidencia")
-                        }
+            Text(
+                text = "Evidencias (prototipo)",
+                style = MaterialTheme.typography.titleMedium
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf<String>()) { uri ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(96.dp))
                     }
                 }
             }

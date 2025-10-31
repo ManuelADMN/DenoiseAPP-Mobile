@@ -18,6 +18,7 @@ data class FormUiState(
     val lote: String = "",
     val estado: ReporteEstado = ReporteEstado.PENDIENTE,
     val notas: String = "",
+    val fechaCreacionMillis: Long? = null, // conservar al editar
     val guardando: Boolean = false,
     val error: String? = null,
 ) {
@@ -43,7 +44,8 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                         linea = it.linea.orEmpty(),
                         lote = it.lote.orEmpty(),
                         estado = it.estado,
-                        notas = it.notas.orEmpty()
+                        notas = it.notas.orEmpty(),
+                        fechaCreacionMillis = it.fechaCreacionMillis
                     )
                 }
             }
@@ -74,9 +76,7 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                 lote = s.lote.ifBlank { null },
                 estado = s.estado,
                 notas = s.notas.ifBlank { null },
-                fechaCreacionMillis = s.id?.let { s0 -> // si edita, no cambiar creación
-                    s0.length.toLong() // placeholder, no tenemos el valor original aquí
-                } ?: System.currentTimeMillis(),
+                fechaCreacionMillis = s.fechaCreacionMillis ?: System.currentTimeMillis(), // correcto
                 fechaObjetivoMillis = null,
                 ultimaActualizacionMillis = System.currentTimeMillis(),
                 evidencias = emptyList(),

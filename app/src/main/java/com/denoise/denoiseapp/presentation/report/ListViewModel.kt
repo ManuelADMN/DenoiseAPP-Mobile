@@ -11,7 +11,8 @@ import kotlinx.coroutines.launch
 
 data class ListUiState(
     val loading: Boolean = true,
-    val items: List<Reporte> = emptyList(),
+    val source: List<Reporte> = emptyList(), // lista cruda de BD
+    val items: List<Reporte> = emptyList(),  // lista filtrada para UI
     val query: String = "",
     val filtroEstado: ReporteEstado? = null,
     val error: String? = null,
@@ -27,11 +28,13 @@ class ListViewModel(app: Application): AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            getReports().onStart { _state.update { it.copy(loading = true) } }
+            getReports()
+                .onStart { _state.update { it.copy(loading = true) } }
                 .catch { e -> _state.update { it.copy(loading = false, error = e.message) } }
                 .collect { list ->
                     _state.update { s ->
-                        s.copy(loading = false, items = aplicarFiltros(list, s.query, s.filtroEstado))
+                        val filtered = aplicarFiltros(list, s.query, s.filtroEstado)
+                        s.copy(loading = false, source = list, items = filtered)
                     }
                 }
         }
@@ -39,23 +42,21 @@ class ListViewModel(app: Application): AndroidViewModel(app) {
 
     fun onQueryChange(q: String) {
         _state.update { s ->
-            s.copy(query = q, items = aplicarFiltros(s.itemsOriginal(), q, s.filtroEstado))
+            val filtered = aplicarFiltros(s.source, q, s.filtroEstado)
+            s.copy(query = q, items = filtered)
         }
     }
 
     fun onEstadoChange(estado: ReporteEstado?) {
         _state.update { s ->
-            s.copy(filtroEstado = estado, items = aplicarFiltros(s.itemsOriginal(), s.query, estado))
+            val filtered = aplicarFiltros(s.source, s.query, estado)
+            s.copy(filtroEstado = estado, items = filtered)
         }
     }
 
     fun toggleFiltros() {
         _state.update { it.copy(filtrosVisibles = !it.filtrosVisibles) }
     }
-
-    // Helper para re-aplicar sobre la fuente original (ya la trae el flow)
-    private fun ListUiState.itemsOriginal(): List<Reporte> = items
-    // Como estamos sustituyendo en cada collect, usamos el último items y re-filtramos.
 
     private fun aplicarFiltros(
         base: List<Reporte>,
