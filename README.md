@@ -1,9 +1,4 @@
 
-
-#DenoiseAPP (Compose + Material 3)
-
-**EP2/EP3 (DSY1105) · Persistencia local (Room) · Enfoque en Dashboard**
-
 App móvil para **registro y seguimiento de órdenes** (inspección sanitaria Denoise SH) construida con **Jetpack Compose + Material 3**, **Room/SQLite** (sin Supabase), **Navigation** con argumentos, **ViewModel + Flow** y **recursos nativos** (Photo Picker, Haptics).
 Esta versión prioriza el **Dashboard analítico**: KPIs accionables, tendencias por estado, filtros persistentes y atajos a vistas operativas.
 
