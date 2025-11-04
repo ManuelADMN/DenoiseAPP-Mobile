@@ -1,19 +1,36 @@
-# README — DenoiseAPP Mobile (Compose + Material 3)
 
-**Cumplimiento de la rúbrica EP2/EP3 (DSY1105) · Persistencia local (Room) — sin Supabase**
+---
 
-Este proyecto implementa una app móvil de *Servicios técnicos / atención al cliente* enfocada en **registro y seguimiento de órdenes (reportes)** para inspección sanitaria (Denoise SH). La app está construida con **Jetpack Compose + Material 3**, **Room/SQLite** para almacenamiento **local**, **navegación con argumentos**, **ViewModels + Flow** para gestión de estado, **recursos nativos** (photo picker y vibración/haptics) y **animaciones** en navegación y UI.
+#DenoiseAPP (Compose + Material 3)
 
-> **Importante**: Se **reemplazó Supabase** por **almacenamiento local** (**Room**). No hay dependencias ni llamadas a Supabase.
+**EP2/EP3 (DSY1105) · Persistencia local (Room) · Enfoque en Dashboard**
+
+App móvil para **registro y seguimiento de órdenes** (inspección sanitaria Denoise SH) construida con **Jetpack Compose + Material 3**, **Room/SQLite** (sin Supabase), **Navigation** con argumentos, **ViewModel + Flow** y **recursos nativos** (Photo Picker, Haptics).
+Esta versión prioriza el **Dashboard analítico**: KPIs accionables, tendencias por estado, filtros persistentes y atajos a vistas operativas.
+
+> **Importante**: Se **eliminó Supabase**. Toda la persistencia es **local con Room**.
+
+---
+
+## Qué cambió (en 1 minuto)
+
+* **Dashboard v2** con 3 zonas:
+
+  * **KPIs accionables** (toques abren listas filtradas).
+  * **Tendencias** (creados vs finalizados por semana; distribución por estado).
+  * **Backlog & calidad** (pendientes por antigüedad; media de evidencias por reporte).
+* **Filtros globales** de **fecha, planta y estado** que afectan Dashboard y Lista.
+* **Atajos rápidos**: *Nuevo reporte*, *Pendientes hoy*, *QA en curso*.
+* **Conectividad visible**: banner si el dispositivo está offline.
 
 ---
 
 ## Cómo ejecutar
 
-1. Abrir el proyecto en **Android Studio** (Giraffe/Koala+).
+1. Abrir en **Android Studio** (Giraffe/Koala+).
 2. Sincronizar Gradle y compilar.
-3. Ejecutar en emulador o dispositivo físico (minSdk 24, compileSdk 36).
-4. Primer arranque: se genera **semilla de datos** para la demo.
+3. Ejecutar (minSdk **24**, compileSdk **36**).
+4. Primer arranque: se genera **semilla de datos** para demo (Room).
 
 ---
 
@@ -21,10 +38,10 @@ Este proyecto implementa una app móvil de *Servicios técnicos / atención al c
 
 * **Kotlin 2.0.21** · **Compose BOM 2024.09** · **Material 3**
 * **Room 2.6.1** (entities/DAO/DB con `Callback` para seed)
-* **Navigation Compose** (NavHost con argumentos y transiciones)
+* **Navigation Compose** (rutas con argumentos + transiciones)
 * **ViewModel + StateFlow** (estado reactivo por pantalla)
 * **Photo Picker** (AndroidX Activity) · **HapticFeedback** (Compose)
-* **Coil** (vista previa de imágenes, si aplica)
+* **Canvas/Compose** para gráficos (sin dependencias externas)
 
 ---
 
@@ -39,15 +56,18 @@ app/src/main/java/com/denoise/denoiseapp/
 ├─ data/
 │  ├─ local/{db/AppDatabase.kt, dao/ReportDao.kt, entity/ReportEntity.kt}
 │  ├─ repository/{ReportRepository.kt, ReportRepositoryImpl.kt, ReportMappers.kt}
-│  └─ seed/DemoSeed.kt (seed principal se ejecuta en AppDatabase)
+│  └─ seed/DemoSeed.kt
 ├─ domain/
 │  ├─ model/{Report.kt, ReportStatus.kt, Planta.kt, Salmon.kt}
-│  └─ usecase/{GetReports.kt, GetReportById.kt, CreateOrUpdateReport.kt, DeleteReport.kt, SearchReports.kt}
-├─ presentation/report/{ListViewModel.kt, FormViewModel.kt, DetailViewModel.kt}
+│  └─ usecase/{GetReports.kt, GetReportById.kt, CreateOrUpdateReport.kt,
+│             DeleteReport.kt, SearchReports.kt}
+├─ presentation/
+│  ├─ report/{ListViewModel.kt, FormViewModel.kt, DetailViewModel.kt}
+│  └─ dashboard/DashboardViewModel.kt   ← **(nuevo/actualizado)**
 ├─ ui/
 │  ├─ navigation/AppNavGraph.kt
 │  ├─ components/ConnectivityBanner.kt
-│  ├─ dashboard/DashboardScreen.kt
+│  ├─ dashboard/DashboardScreen.kt      ← **(nuevo/actualizado)**
 │  ├─ settings/SettingsScreen.kt
 │  └─ report/
 │     ├─ list/{ReportListScreen.kt, FilterList.kt}
@@ -58,135 +78,114 @@ app/src/main/java/com/denoise/denoiseapp/
 
 ---
 
-## Mapa de cumplimiento — “¿Qué debe incluir?”
+## Dashboard — contenido y fórmulas
 
-| Ítem                                | Dónde se ve en la app                                                                                                                      | Código fuente (rutas clave)                                                                                                                                                                                                                                                                                               |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **✔️ Diseño visual con Material 3** | Temas claro/oscuro, TopAppBar, Cards, Buttons, TextFields en todas las pantallas.                                                          | `core/ui/theme/{Theme.kt, Color.kt, Type.kt}` · uso de **MaterialTheme** en `MainActivity.kt`, `AppNavGraph.kt`, `DashboardScreen.kt`, `Report*Screen.kt`.                                                                                                                                                                |
-| **✔️ Formularios validados**        | Formulario de Reporte con campos obligatorios (*Título*, *Planta*), mensajes de error y control de guardado.                               | `ui/report/form/ReportFormScreen.kt` (propiedades `isError`, `supportingText`, validación en onClick). `presentation/report/FormViewModel.kt` (alta/edición).                                                                                                                                                             |
-| **✔️ Navegación funcional**         | Flujo **List → Form → List → Detail(id) → back** con argumentos y *BottomBar* (Reportes/Dashboard/Ajustes).                                | `ui/navigation/AppNavGraph.kt` (NavHost, rutas, `detail/{id}` y `form?id={id}`, back-stack correcto).                                                                                                                                                                                                                     |
-| **✔️ Gestión de estado**            | Estado por pantalla con **ViewModel + StateFlow**; la UI reacciona sin “pull-to-refresh”.                                                  | `presentation/report/{ListViewModel.kt, FormViewModel.kt, DetailViewModel.kt}` · `data/repository/ReportRepository(Impl).kt` (Flow).                                                                                                                                                                                      |
-| **✔️ Almacenamiento local**         | Persistencia **Room/SQLite**: CRUD completo + **semilla** inicial para demo.                                                               | `data/local/{db/AppDatabase.kt, dao/ReportDao.kt, entity/ReportEntity.kt}` · seed en `AppDatabase.Callback`.                                                                                                                                                                                                              |
-| **✔️ Uso de recursos nativos**      | **Photo Picker** (galería) para evidencias y **HapticFeedback** (vibración) en acciones clave; **banner “Sin conexión”** (monitor de red). | Picker en `ui/report/form/ReportFormScreen.kt` (`rememberLauncherForActivityResult(PickMultipleVisualMedia)`); haptics en `ReportDetailScreen.kt` (eliminar) y `SettingsScreen.kt` (botón “Probar vibración”); **Conectividad**: `core/util/connectivity/ConnectivityMonitor.kt` + `ui/components/ConnectivityBanner.kt`. |
-| **✔️ Animaciones**                  | **Transiciones** laterales entre pantallas; **AnimatedVisibility** para filtros; **AnimatedContent/animateContentSize** en tarjetas.       | `ui/navigation/AppNavGraph.kt` (slide in/out con `tween`) · `ui/report/list/ReportListScreen.kt` (AnimatedVisibility/animateContentSize) · `ui/report/detail/ReportDetailScreen.kt` (AnimatedContent).                                                                                                                    |
+**Zonas y widgets**
 
----
+1. **KPIs (Cards)**
 
-## Mapa contra “Estructura APP”
+* **Total**: `count(reports)`
+* **Activos**: `count(status != FINALIZADO)`
+* **% Finalizados**: `count(FINALIZADO)/count(all) * 100`
+* **SLA prom.**: `avg(finalizedAt - createdAt)` (solo finalizados)
+* **Evidencias prom.**: `avg(evidencesCount)`
 
-| Sección (rúbrica)       | ¿Qué muestra la app?                                                                         | Dónde (UI / lógica)                                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Registro/Monitoreo**  | Lista de reportes con planta, línea, lote, estado, evidencias (contador).                    | `ui/report/list/ReportListScreen.kt` · VM: `ListViewModel.kt` · modelos: `domain/model/Report*.kt`                                      |
-| **Seguimiento estado**  | Estados **PENDIENTE/EN_PROCESO/QA/FINALIZADO** + filtros por estado/búsqueda.                | `domain/model/ReportStatus.kt` · `FilterList.kt` · lógica en `ListViewModel.kt` (filtro + query).                                       |
-| **CRUD servicios**      | Crear/editar (Form), ver detalle (Detail), eliminar (Detail/List).                           | **Form**: `ReportFormScreen.kt` + `FormViewModel.kt` · **Detail**: `ReportDetailScreen.kt` + `DetailViewModel.kt` · **Repo/DAO**: Room. |
-| **Historial**           | Lista ordenada por fecha con **búsqueda** y **filtros** (planta/estado/fecha concepto).      | `ReportListScreen.kt` + `ListViewModel.kt` · consulta en `ReportDao.listAllOrderByFecha()`.                                             |
-| **Detalle servicio**    | Campos completos, acciones de **editar**/**eliminar**, **evidencias** (contador), KPIs base. | `ReportDetailScreen.kt` + `DetailViewModel.kt`.                                                                                         |
-| **Formulario validado** | Campos obligatorios, errores visibles, picker de evidencias, notas.                          | `ReportFormScreen.kt` (validación UI) + `FormViewModel.kt` (guardar/actualizar).                                                        |
+2. **Tendencias**
 
-**Roles**
+* **Creación vs cierre (semanal)**: series por semana
+  `created_week[w] = count(createdAt in w)`
+  `closed_week[w]  = count(finalizedAt in w)`
+* **Distribución por estado (actual)**: `groupBy(status).count()`
 
-| Rol                          | Cómo se cubre                                                                      |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| **Operario/Cliente interno** | Crea solicitudes desde **Form**, revisa sus órdenes en **List/Detail**.            |
-| **Técnico/Administrador**    | Gestiona estados y edición desde **Detail/Form**; puede **eliminar** y actualizar. |
+3. **Backlog & calidad**
 
-> La app incluye las acciones de ambos roles; si se requiere segmentación por permisos, es extensible desde `domain/model` + `presentation` (no requerido en EP2/EP3).
+* **Aging pendientes**: buckets por días desde `createdAt`
+  `0–2 | 3–7 | 8–14 | >14`
+* **Top plantas con pendientes**: `groupBy(planta).count(pendientes)` **desc**
 
----
+**Interacciones**
 
-## Paso a paso (sin código) → **Dónde está en el repo**
+* Tocar un **KPI** o **barra/pastel** → abre **Lista** con filtros aplicados.
+* Filtro de **rango de fechas** en la barra superior del Dashboard (sticky).
+* **Chips** de estado/planta afectan todo el tablero (y se recuerdan en la sesión).
+* **Acciones rápidas**: *Nuevo*, *Pendientes hoy*, *QA en curso*.
 
-| Paso                                                  | Carpeta/Archivo(s)                                                                                                                                               |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0) Pre-flight** (M3, tema claro/oscuro, compila)    | Tema: `core/ui/theme/*` · Compose/M3 activo en `build.gradle.kts` y aplicado en `MainActivity.kt`.                                                               |
-| **1) Modelado dominio** (Report/Status/Salmon/Planta) | `domain/model/{Report.kt, ReportStatus.kt, Salmon.kt, Planta.kt}`.                                                                                               |
-| **2) Almacenamiento local** (Room)                    | `data/local/{entity/ReportEntity.kt, dao/ReportDao.kt, db/AppDatabase.kt}`.                                                                                      |
-| **3) Repositorio (Flow)**                             | `data/repository/{ReportRepository.kt, ReportRepositoryImpl.kt, ReportMappers.kt}`.                                                                              |
-| **4) Casos de uso (CRUD + Get/Search)**               | `domain/usecase/{GetReports.kt, GetReportById.kt, CreateOrUpdateReport.kt, DeleteReport.kt, SearchReports.kt}`.                                                  |
-| **5) Semilla demo (10–20)**                           | `AppDatabase.kt` (`RoomDatabase.Callback` genera datos en primer arranque).                                                                                      |
-| **6) ViewModels por pantalla**                        | `presentation/report/{ListViewModel.kt, FormViewModel.kt, DetailViewModel.kt}`.                                                                                  |
-| **7) UI — List/Form/Detail (+ Ajustes)**              | `ui/report/{list,form,detail}` · `ui/settings/SettingsScreen.kt` (tema, vibración).                                                                              |
-| **8) Navegación (rutas/args)**                        | `ui/navigation/AppNavGraph.kt` (NavHost, `detail/{id}`, `form?id={id}`).                                                                                         |
-| **9) Material 3 aplicado**                            | Uso de `MaterialTheme` y componentes M3 en todas las pantallas.                                                                                                  |
-| **10) Validaciones**                                  | `ReportFormScreen.kt` (errores visibles; guardado condicionado).                                                                                                 |
-| **11) Recursos nativos (2+)**                         | **Photo Picker** en `ReportFormScreen.kt`; **Haptics** en `ReportDetailScreen.kt` y `SettingsScreen.kt`; **Conectividad** banner y monitor.                      |
-| **12) Animaciones (3+)**                              | Transiciones de navegación (`AppNavGraph.kt`), filtros (`AnimatedVisibility` en `ReportListScreen.kt`), detalles (`AnimatedContent` en `ReportDetailScreen.kt`). |
-| **13) QA rápido**                                     | Estados en ViewModel (rotación conserva), CRUD end-to-end sin crash, accesibilidad básica (tipografías y contrastes M3).                                         |
-| **14) Entrega**                                       | Este README + código; APK/Video/Screenshots se agregan en `release/` (cuando se generen).                                                                        |
+**Rendimiento y UX**
+
+* Cálculos en **ViewModel** (Flows combinados) con mínima recomposición.
+* Gráficos con **Canvas** y `animate*` para entradas/salidas suaves.
+* Soporte claro/oscuro (Material 3), accesibilidad (tipos y contrastes).
 
 ---
 
-## Persistencia local (sin Supabase)
+## Mapa de cumplimiento (EP2/EP3) centrado en Dashboard
 
-* **Room**:
-
-  * **Entidad**: `ReportEntity`
-  * **DAO**: `ReportDao` (listar ordenado, por id, upsert, delete)
-  * **DB**: `AppDatabase` (singleton + **seed** inicial)
-  * **Repositorio**: `ReportRepositoryImpl` (**Flow** → UI reactiva)
-
-* **Semilla de datos** para demo: se ejecuta **una sola vez** en la creación de la DB (ver `RoomDatabase.Callback` en `AppDatabase.kt`).
-
----
-
-## Navegación y argumentos
-
-* **Rutas**: `list`, `form?id={id}`, `detail/{id}`, `dashboard`, `settings`.
-* **Transiciones**: deslizamientos laterales con `slideIn/slideOut` (`tween(250ms)`).
+| Ítem rúbrica                       | Evidencia en la app                                                                                       | Código clave                                                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Visualización de datos/KPIs**    | KPIs (Total, Activos, % Finalizados, SLA prom., Evidencias prom.)                                         | `ui/dashboard/DashboardScreen.kt`, `presentation/dashboard/DashboardViewModel.kt` |
+| **Historial y seguimiento**        | Tendencias creados vs finalizados (semanal), distribución por estado                                      | `DashboardViewModel.kt` (deriva Flows de Room)                                    |
+| **Filtros y navegación funcional** | Filtros globales (fecha/estado/planta), tap en KPI → Lista filtrada, transiciones animadas                | `AppNavGraph.kt`, `DashboardScreen.kt`, `ReportListScreen.kt`                     |
+| **Persistencia local**             | Room (CRUD, seed, consultas agregadas simples desde DAO/Repo)                                             | `data/local/*`, `ReportRepositoryImpl.kt`                                         |
+| **Formularios validados**          | Crear/Editar con errores visibles; Photo Picker                                                           | `ReportFormScreen.kt`, `FormViewModel.kt`                                         |
+| **Recursos nativos (2+)**          | Photo Picker, Haptics en acciones; banner **Sin conexión**                                                | `ReportFormScreen.kt`, `SettingsScreen.kt`, `ConnectivityBanner.kt`               |
+| **Animaciones en UI/Navegación**   | Animaciones en KPIs/gráficos (Canvas + `animate*`), transiciones `slideIn/slideOut`, `AnimatedVisibility` | `DashboardScreen.kt`, `AppNavGraph.kt`, `ReportListScreen.kt`                     |
 
 ---
 
-## Validaciones de formulario
+## Flujo: del Dashboard a la operación
 
-* **Obligatorios**: *Título* y *Planta* (errores visibles con `isError` + `supportingText`).
-* **Evidencias**: `rememberLauncherForActivityResult(PickMultipleVisualMedia)` (hasta 5).
-* **Guardado**: sólo si no hay errores; retroalimentación háptica al confirmar.
-
----
-
-## Recursos nativos
-
-* **Photo Picker** (galería) — sin permisos de almacenamiento en Android 13+.
-* **Vibración/Haptics** — `LocalHapticFeedback` (botón “Probar vibración” y al eliminar).
-* **Conectividad** — monitor (`ConnectivityMonitor`) + **banner** “Sin conexión”.
+1. Ver **KPIs** y **Tendencias** → identificar cuello de botella (p.ej., *QA bajo*).
+2. Tocar el KPI **Activos** o la barra de **Pendientes** → **Lista** filtrada.
+3. Abrir **Detalle** → **Editar estado** o **Añadir evidencias**.
+4. Volver al **Dashboard** → métricas se actualizan en vivo (Flow/Room).
 
 ---
 
-## Animaciones
+## Validaciones de formulario (resumen)
 
-* **Navegación**: `slideInHorizontally/slideOutHorizontally` con `tween(250)`.
-* **Filtros**: `AnimatedVisibility` al mostrar/ocultar.
-* **Detalle**: `AnimatedContent` y `animateContentSize` en tarjetas/lista.
+* **Obligatorios**: *Título* y *Planta* (`isError`, `supportingText`).
+* **Evidencias**: `PickMultipleVisualMedia` (hasta 5).
+* **Guardado** condicionado; **Haptics** al confirmar/eliminar.
+
+---
+
+## Conectividad
+
+* **Monitor**: `ConnectivityMonitor` (Flow).
+* **Banner**: `ConnectivityBanner` visible si no hay red (no bloquea la app).
 
 ---
 
 ## Permisos y accesibilidad
 
-* **Permisos**: `INTERNET`, `ACCESS_NETWORK_STATE` (para banner/monitor de red).
-* **Accesibilidad básica**: tamaños tocables M3, tipografías legibles, estados de error claros.
+* **Permisos**: `INTERNET`, `ACCESS_NETWORK_STATE` (banner/monitor).
+* **A11y**: tamaños tocables M3, tipografías legibles, estados de error claros.
 
 ---
 
 ## Notas de arquitectura
 
-* **Capa de UI** no conversa con DAO: usa **Casos de Uso** → **Repositorio** → **Room**.
-* **Estado** en **ViewModels** con **StateFlow**, recolectado en Compose (`collectAsState`).
-* **DI simple** con `ServiceLocator` (sin Hilt para simplificar EP2/EP3).
+* UI → **ViewModel** → **UseCases** → **Repository** → **Room** (DAO).
+* **StateFlow** recolectado en Compose (`collectAsState`).
+* **ServiceLocator** simple (sin Hilt) para EP2/EP3.
+* Cálculos del Dashboard **en ViewModel** (no en Composables).
 
 ---
 
 ## Checklist de demo (rápida)
 
-1. Abrir app → ver **Dashboard** con KPIs.
-2. Ir a **Reportes** → ver lista con **búsqueda** y **filtros** (animados).
-3. **Crear** nuevo reporte (errores si faltan campos) + **Photo Picker**.
-4. Volver a **Lista** → aparece el nuevo ítem sin refrescar manual.
-5. Abrir **Detalle** → **Editar** o **Eliminar** (vibración al eliminar).
-6. **Ajustes** → cambiar **Modo oscuro** + **Probar vibración**.
-7. Desconectar red (simulado) → aparece **banner “Sin conexión”**.
+1. **Dashboard**: revisar KPIs, mover el **rango de fechas** y observar cambios.
+2. Tocar **% Finalizados** → ver **Lista** filtrada y gráfica estable.
+3. Crear **Nuevo reporte** (errores si faltan campos) + **Photo Picker**.
+4. Volver al **Dashboard** → KPIs y Tendencias se actualizan.
+5. **Detalle**: cambiar estado a **QA** o **Finalizado** (Haptics en eliminar).
+6. **Ajustes**: alternar **modo oscuro** y probar vibración.
+7. Apagar red → **banner Sin conexión** (la app sigue operativa).
 
 ---
 
-### Conclusión
+## Conclusión
 
-El proyecto **cumple** con los ítems marcados en la rúbrica: **Material 3**, **Formularios validados**, **Navegación funcional**, **Gestión de estado**, **Almacenamiento local** (Room), **Uso de recursos nativos** (Photo Picker + Haptics + Conectividad) y **Animaciones** (navegación + UI). La estructura y el código están mapeados en las tablas para verificación directa. Si quieres, puedo adjuntar un APK de demo y una minuta de video con marcas de tiempo para cada criterio.
+La app cumple la rúbrica con foco en **Dashboard**: **KPIs accionables**, **tendencias temporales**, **filtros globales**, **navegación funcional** y **persistencia local**; además de **formularios validados**, **recursos nativos** y **animaciones**. El tablero guía el trabajo diario y reduce el tiempo para encontrar y cerrar pendientes.
+
+---
