@@ -1,5 +1,4 @@
 
----
 
 #DenoiseAPP (Compose + Material 3)
 
@@ -8,22 +7,7 @@
 App móvil para **registro y seguimiento de órdenes** (inspección sanitaria Denoise SH) construida con **Jetpack Compose + Material 3**, **Room/SQLite** (sin Supabase), **Navigation** con argumentos, **ViewModel + Flow** y **recursos nativos** (Photo Picker, Haptics).
 Esta versión prioriza el **Dashboard analítico**: KPIs accionables, tendencias por estado, filtros persistentes y atajos a vistas operativas.
 
-> **Importante**: Se **eliminó Supabase**. Toda la persistencia es **local con Room**.
 
----
-
-## Qué cambió (en 1 minuto)
-
-* **Dashboard v2** con 3 zonas:
-
-  * **KPIs accionables** (toques abren listas filtradas).
-  * **Tendencias** (creados vs finalizados por semana; distribución por estado).
-  * **Backlog & calidad** (pendientes por antigüedad; media de evidencias por reporte).
-* **Filtros globales** de **fecha, planta y estado** que afectan Dashboard y Lista.
-* **Atajos rápidos**: *Nuevo reporte*, *Pendientes hoy*, *QA en curso*.
-* **Conectividad visible**: banner si el dispositivo está offline.
-
----
 
 ## Cómo ejecutar
 
