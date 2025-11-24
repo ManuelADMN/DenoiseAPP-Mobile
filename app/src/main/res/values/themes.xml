@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.DenoiseApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Este es el tema que busca el AndroidManifest -->
+    <style name="Theme.DenoiseAPP" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Color de la barra de estado (Status Bar) -->
+        <item name="android:statusBarColor">@color/purple_700</item>
+        <!-- Color de los botones o elementos de sistema nativos -->
+        <item name="android:colorBackground">@color/white</item>
+    </style>
 </resources>

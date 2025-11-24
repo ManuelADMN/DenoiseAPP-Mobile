@@ -1,32 +1,25 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
-
-    // KSP (versión que SÍ existe para Kotlin 2.0.21)
-    id("com.google.devtools.ksp") version "2.0.21-1.0.27"
+    // CORRECCIÓN: Usamos 'alias' para que tome la versión correcta del catálogo
+    alias(libs.plugins.com.google.devtools.ksp)
 }
 
 android {
     namespace = "com.denoise.denoiseapp"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.denoise.denoiseapp"
-        minSdk = 24
-        targetSdk = 36
+        minSdk = 26
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
-        // Si NO usas Supabase, puedes borrar todo este bloque:
-        val lp = gradleLocalProperties(rootDir, providers)
-        val supabaseUrl = lp.getProperty("SUPABASE_URL") ?: ""
-        val supabaseAnon = lp.getProperty("SUPABASE_ANON_KEY") ?: ""
-        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnon\"")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -38,73 +31,64 @@ android {
             )
         }
     }
-
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
     }
 
     buildFeatures {
         compose = true
-        buildConfig = true
     }
-
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
     packaging {
-        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
-}
-
-// Parámetros de Room para KSP
-ksp {
-    arg("room.generateKotlin", "true")
-    arg("room.incremental", "true")
 }
 
 dependencies {
-    // ===== Room estable + KSP =====
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    implementation(libs.androidx.compose.ui.unit)
-    ksp(libs.androidx.room.compiler)
-
-    // ===== Tu stack Compose del catálogo =====
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.activity.compose)
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+
     implementation(libs.androidx.navigation.compose)
 
-    implementation(libs.coil.compose)
-    implementation("androidx.compose.material:material-icons-extended:<versión>")
-    implementation("androidx.compose.material3:material3:<última>")
-    implementation("androidx.compose.material:material-icons-extended:<última>")
+    // Room
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
-// RED (Retrofit + OkHttp) para Microservicios y API Externa
+    // Coil
+    implementation(libs.coil.compose)
+
+    // Retrofit
     implementation(libs.squareup.retrofit)
     implementation(libs.squareup.retrofit.gson)
     implementation(libs.squareup.okhttp.logging)
 
-    // JSON (si lo usas)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-
-    // Desugaring
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
+    // IMPLEMENTACIÓN DE UBICACIÓN (GPS)
+    implementation(libs.play.services.location)
 
     // Tests
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    // Tests Unitarios (Para IL3.2)
-    testImplementation(libs.junit)
-    // Mockk o Mockito son recomendados, pero usaremos JUnit puro para simplificar
 }

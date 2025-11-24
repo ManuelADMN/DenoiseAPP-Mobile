@@ -31,7 +31,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
     init {
-        // Cargar Reportes (Sincronizados con Microservicio via Repository)
         cargarReportes()
     }
 
@@ -43,7 +42,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 .collect { list ->
                     val total = list.size
                     val porEstado = list.groupingBy { it.estado }.eachCount()
-                    val recientes = list.sortedByDescending { it.fechaCreacionMillis ?: 0L }.take(5)
+
+                    // CORRECCIÓN: Eliminado '?: 0L' porque fechaCreacionMillis ya es Long (no nulo)
+                    val recientes = list.sortedByDescending { it.fechaCreacionMillis }.take(5)
 
                     _state.update {
                         it.copy(

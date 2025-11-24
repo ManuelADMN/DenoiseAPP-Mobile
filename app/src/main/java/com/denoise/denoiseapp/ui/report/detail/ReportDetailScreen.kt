@@ -10,11 +10,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.denoise.denoiseapp.presentation.report.DetailViewModel
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack // Icono correcto para evitar warnings
 import androidx.compose.material.icons.filled.Edit
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,25 +28,42 @@ fun ReportDetailScreen(
             TopAppBar(
                 title = { Text("Detalle") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Atrás") }
+                    // Usamos AutoMirrored para soportar idiomas RTL (Right-To-Left) correctamente
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                    }
                 },
                 actions = {
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar")
+                    }
                 }
             )
         }
     ) { pad ->
         when {
-            state.loading -> Box(Modifier.padding(pad).fillMaxSize()) { CircularProgressIndicator() }
-            state.reporte == null -> Box(Modifier.padding(pad).fillMaxSize()) { Text("No encontrado") }
+            state.loading -> {
+                Box(Modifier.padding(pad).fillMaxSize()) {
+                    CircularProgressIndicator()
+                }
+            }
+            state.reporte == null -> {
+                Box(Modifier.padding(pad).fillMaxSize()) {
+                    Text("No encontrado")
+                }
+            }
             else -> {
                 val r = state.reporte
                 Column(
-                    Modifier.padding(pad).padding(16.dp).fillMaxSize(),
+                    Modifier
+                        .padding(pad)
+                        .padding(16.dp)
+                        .fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(r!!.titulo, style = MaterialTheme.typography.headlineSmall)
                     Text("Planta: ${r.planta.nombre}")
+
                     r.lote?.let { Text("Lote: $it") }
                     r.linea?.let { Text("Línea: $it") }
 
@@ -60,10 +74,15 @@ fun ReportDetailScreen(
                     r.notas?.let { Text("Notas: $it") }
 
                     Spacer(Modifier.height(16.dp))
+
+                    // Botones de acción
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { onEdit() }
-                        ) { Text("Editar") }
+                        ) {
+                            Text("Editar")
+                        }
+
                         OutlinedButton(
                             onClick = {
                                 vm.eliminar(r.id) {
@@ -71,8 +90,12 @@ fun ReportDetailScreen(
                                     onBack()
                                 }
                             },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) { Text("Eliminar") }
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Eliminar")
+                        }
                     }
                 }
             }

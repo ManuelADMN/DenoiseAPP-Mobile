@@ -7,9 +7,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ListAlt // Icono corregido (espejado)
 import androidx.compose.material.icons.outlined.Assessment
-import androidx.compose.material.icons.outlined.ListAlt
-import androidx.compose.material.icons.outlined.Map // <--- Asegúrate de importar esto
+import androidx.compose.material.icons.outlined.Map // Icono para el mapa
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -35,12 +35,13 @@ import com.denoise.denoiseapp.ui.report.detail.ReportDetailScreen
 import com.denoise.denoiseapp.ui.report.form.ReportFormScreen
 import com.denoise.denoiseapp.ui.report.list.ReportListScreen
 import com.denoise.denoiseapp.ui.settings.SettingsScreen
-import com.denoise.denoiseapp.ui.weather.WeatherScreen // <--- Importamos la nueva pantalla
+import com.denoise.denoiseapp.ui.weather.WeatherScreen
 
+// Definición de todas las rutas de navegación
 object Routes {
     const val DASHBOARD = "dashboard"
     const val LIST = "list"
-    const val MAPA = "mapa" // <--- Nueva Ruta declarada
+    const val MAPA = "mapa" // Nueva ruta para el mapa/clima
     const val FORM = "form"
     const val DETAIL = "detail/{id}"
     const val SETTINGS = "settings"
@@ -50,17 +51,15 @@ object Routes {
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
-
-    // Control del tema oscuro/claro
-    var darkTheme by rememberSaveable { mutableStateOf(false) }
+    var darkTheme by rememberSaveable { mutableStateOf(false) } // Estado simple para el tema
 
     DenoiseTheme(darkTheme = darkTheme) {
 
+        // Obtenemos la ruta actual para saber qué botón de la barra inferior resaltar
         val currentRoute = nav.currentBackStackEntryAsState().value
             ?.destination?.route.normalize()
 
-        // Definimos en qué pantallas se muestra la barra inferior
-        // AHORA INCLUYE Routes.MAPA
+        // Pantallas que deben mostrar la barra de navegación inferior
         val showBottomBar = currentRoute in setOf(Routes.LIST, Routes.DASHBOARD, Routes.MAPA, Routes.SETTINGS)
 
         Scaffold(
@@ -74,9 +73,10 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
                         val items = listOf(
-                            Triple(Routes.LIST, "Reportes", Icons.Outlined.ListAlt),
+                            // Usamos Icons.AutoMirrored.Outlined.ListAlt para evitar el warning de deprecación
+                            Triple(Routes.LIST, "Reportes", Icons.AutoMirrored.Outlined.ListAlt),
                             Triple(Routes.DASHBOARD, "Dash", Icons.Outlined.Assessment),
-                            Triple(Routes.MAPA, "Mapa", Icons.Outlined.Map), // <--- BOTÓN NUEVO AQUÍ
+                            Triple(Routes.MAPA, "Mapa", Icons.Outlined.Map), // Nuevo botón de Mapa
                             Triple(Routes.SETTINGS, "Ajustes", Icons.Outlined.Settings)
                         )
                         items.forEach { (route, label, icon) ->
@@ -86,6 +86,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                                 onClick = {
                                     if (!selected) {
                                         nav.navigate(route) {
+                                            // Evita crear múltiples copias de la misma pantalla en el stack
                                             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = true
@@ -106,15 +107,15 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                     startDestination = Routes.DASHBOARD,
                     modifier = modifier
                 ) {
-                    // ---- Dashboard ----
+                    // 1. PANTALLA DASHBOARD
                     composable(Routes.DASHBOARD) {
+                        // Llamada limpia sin argumentos extraños
                         DashboardScreen(
-                            onIrALista = { nav.navigate(Routes.LIST) },
                             onOpenSettings = { nav.navigate(Routes.SETTINGS) }
                         )
                     }
 
-                    // ---- Lista ----
+                    // 2. PANTALLA LISTA DE REPORTES
                     composable(Routes.LIST) {
                         val vm: ListViewModel = viewModel()
                         ReportListScreen(
@@ -126,12 +127,12 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    // ---- NUEVA PANTALLA: MAPA / CLIMA ----
+                    // 3. PANTALLA MAPA / CLIMA (NUEVA)
                     composable(Routes.MAPA) {
                         WeatherScreen()
                     }
 
-                    // ---- Formulario ----
+                    // 4. PANTALLA FORMULARIO (Crear/Editar)
                     composable(
                         route = "${Routes.FORM}?id={id}",
                         arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true })
@@ -142,7 +143,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         ReportFormScreen(vm = vm, onSaved = { nav.popBackStack(Routes.LIST, inclusive = false) })
                     }
 
-                    // ---- Detalle ----
+                    // 5. PANTALLA DETALLE DE REPORTE
                     composable(
                         Routes.DETAIL,
                         arguments = listOf(navArgument("id") { type = NavType.StringType })
@@ -153,7 +154,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         ReportDetailScreen(vm = vm, onEdit = { nav.navigate("form?id=$id") }, onBack = { nav.popBackStack() })
                     }
 
-                    // ---- Ajustes ----
+                    // 6. PANTALLA AJUSTES
                     composable(Routes.SETTINGS) {
                         SettingsScreen(isDarkTheme = darkTheme, onToggleTheme = { darkTheme = it })
                     }
@@ -163,7 +164,7 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
     }
 }
 
-// Función auxiliar para limpiar rutas con parámetros
+// Función auxiliar para limpiar la ruta y saber en qué pantalla "base" estamos
 private fun String?.normalize(): String {
     val raw = this ?: return Routes.DASHBOARD
     val base = raw.substringBefore("?")

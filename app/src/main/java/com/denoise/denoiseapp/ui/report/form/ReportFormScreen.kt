@@ -5,7 +5,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -17,11 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -44,31 +42,35 @@ fun ReportFormScreen(
     val context = LocalContext.current
     val state by vm.ui
 
-    // --- LÓGICA DE CÁMARA ---
+    // Variable para guardar la URI temporal de la foto que se va a tomar
     var tempUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher: Toma la foto y si es exitoso, avisa al ViewModel
+    // 1. Launcher para la cámara: Recibe true si la foto se tomó con éxito
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && tempUri != null) {
+            // Si fue exitoso, agregamos la URI a la lista del ViewModel
             vm.agregarFoto(tempUri.toString())
         }
     }
 
-    // Permission Launcher: Pide permiso, y si lo tiene, crea archivo y lanza cámara
+    // 2. Launcher para pedir permisos: Si acepta, crea el archivo y lanza la cámara
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            val (file, uri) = crearArchivoTemporal(context)
+            // CORRECCIÓN: Usamos '_' para descartar la variable 'file' que no usamos aquí
+            val (_, uri) = crearArchivoTemporal(context)
             tempUri = uri
             cameraLauncher.launch(uri)
         }
     }
 
     Scaffold(
-        topBar = { MinimalTopBar(if (state.id == null) "Nuevo reporte" else "Editar reporte") },
+        topBar = {
+            MinimalTopBar(if (state.id == null) "Nuevo reporte" else "Editar reporte")
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = {
@@ -87,7 +89,7 @@ fun ReportFormScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // ... Campos de Texto (Sin cambios) ...
+            // --- CAMPOS DE TEXTO ---
             OutlinedTextField(
                 value = state.titulo, onValueChange = vm::onTituloChange,
                 label = { Text("Título *") },
@@ -100,17 +102,26 @@ fun ReportFormScreen(
                 isError = state.error != null && state.plantaNombre.isBlank(),
                 modifier = Modifier.fillMaxWidth()
             )
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = state.linea, onValueChange = vm::onLineaChange, label = { Text("Línea") }, modifier = Modifier.weight(1f))
-                OutlinedTextField(value = state.lote,  onValueChange = vm::onLoteChange,  label = { Text("Lote")  }, modifier = Modifier.weight(1f))
+                OutlinedTextField(
+                    value = state.linea, onValueChange = vm::onLineaChange,
+                    label = { Text("Línea") }, modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = state.lote,  onValueChange = vm::onLoteChange,
+                    label = { Text("Lote")  }, modifier = Modifier.weight(1f)
+                )
             }
+
             OutlinedTextField(
                 value = state.notas, onValueChange = vm::onNotasChange,
                 label = { Text("Notas") }, modifier = Modifier.fillMaxWidth()
             )
 
+            // --- SECCIÓN DE MÉTRICAS ---
             MinimalSection("Métricas (0–100)")
-            // ... Campos de Métricas (Sin cambios) ...
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = state.porcentajeInfectados, onValueChange = vm::onPorcentajeChange,
@@ -127,6 +138,7 @@ fun ReportFormScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = state.cracking, onValueChange = vm::onCrackingChange,
@@ -144,11 +156,11 @@ fun ReportFormScreen(
                 )
             }
 
-            // --- ZONA DE EVIDENCIAS (ACTUALIZADA) ---
+            // --- SECCIÓN DE EVIDENCIAS (CÁMARA) ---
             MinimalSection("Evidencias")
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Botón Cámara
+                // Botón para abrir la cámara
                 OutlinedButton(
                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                     modifier = Modifier.padding(end = 12.dp)
@@ -158,13 +170,13 @@ fun ReportFormScreen(
                     Text("Tomar Foto")
                 }
 
-                // Texto de ayuda
+                // Mensaje si no hay fotos
                 if (state.fotosUris.isEmpty()) {
                     Text("Sin fotos", style = MaterialTheme.typography.bodySmall)
                 }
             }
 
-            // Lista horizontal de fotos
+            // Galería horizontal de fotos tomadas
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().height(110.dp)
@@ -185,21 +197,26 @@ fun ReportFormScreen(
                 }
             }
 
-            Spacer(Modifier.height(48.dp)) // Espacio extra para el FAB
+            Spacer(Modifier.height(48.dp)) // Espacio final para que el FAB no tape contenido
         }
     }
 }
 
-/** Crea un archivo temporal en caché y devuelve el File y su URI (FileProvider) */
+/**
+ * Función auxiliar para crear un archivo temporal seguro donde la cámara guardará la foto.
+ * Retorna el archivo (File) y su URI segura (usando FileProvider).
+ */
 private fun crearArchivoTemporal(context: Context): Pair<File, Uri> {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
     val nombre = "JPEG_${timeStamp}_"
-    // Usamos cacheDir o filesDir
+
+    // Usamos la caché de la app para no ensuciar la galería pública
     val directorio = File(context.cacheDir, "images")
     if (!directorio.exists()) directorio.mkdirs()
 
     val file = File.createTempFile(nombre, ".jpg", directorio)
 
+    // Generamos la URI usando el FileProvider configurado en el Manifest
     val authority = "${context.packageName}.fileprovider"
     val uri = FileProvider.getUriForFile(context, authority, file)
 

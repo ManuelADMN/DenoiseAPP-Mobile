@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider // CORRECCIÓN: Usamos HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,10 +34,6 @@ fun MinimalTopBar(
     )
 }
 
-/**
- * KPI compacto. Si [useAccent] = true, el valor usa el color de acento (azul).
- * Si es false, usa negro (onSurface).
- */
 @Composable
 fun MinimalKpi(
     label: String,
@@ -76,8 +72,8 @@ fun MinimalKpi(
 @Composable
 fun MinimalSection(title: String) {
     Text(title, style = MaterialTheme.typography.titleMedium)
-    Divider(
-        Modifier.padding(vertical = 8.dp),
+    HorizontalDivider( // CORRECCIÓN: Usamos HorizontalDivider en lugar de Divider
+        modifier = Modifier.padding(vertical = 8.dp),
         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
     )
 }
