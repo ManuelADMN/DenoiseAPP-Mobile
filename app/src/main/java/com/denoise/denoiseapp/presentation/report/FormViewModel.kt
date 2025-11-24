@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.denoise.denoiseapp.core.di.ServiceLocator
+import com.denoise.denoiseapp.domain.model.Evidencia
 import com.denoise.denoiseapp.domain.model.Planta
 import com.denoise.denoiseapp.domain.model.Reporte
 import com.denoise.denoiseapp.domain.model.ReporteEstado
@@ -20,11 +21,14 @@ data class FormUiState(
     val notas: String = "",
     val fechaCreacionMillis: Long? = null,
 
-    // Porcentajes (como texto para validar)
+    // Métricas
     val porcentajeInfectados: String = "0",
     val melanosis: String = "0",
     val cracking: String = "0",
     val gaping: String = "0",
+
+    // --- NUEVO: Lista de URIs de las fotos ---
+    val fotosUris: List<String> = emptyList(),
 
     val guardando: Boolean = false,
     val error: String? = null,
@@ -63,13 +67,16 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                         porcentajeInfectados = it.porcentajeInfectados.toString(),
                         melanosis = it.melanosis.toString(),
                         cracking = it.cracking.toString(),
-                        gaping = it.gaping.toString()
+                        gaping = it.gaping.toString(),
+                        // Cargamos fotos si existieran (Mapeo simple)
+                        fotosUris = it.evidencias.mapNotNull { ev -> ev.uriLocal }
                     )
                 }
             }
         }
     }
 
+    // Setters
     fun onTituloChange(v: String) { ui.value = ui.value.copy(titulo = v) }
     fun onPlantaChange(v: String) { ui.value = ui.value.copy(plantaNombre = v) }
     fun onLineaChange(v: String) { ui.value = ui.value.copy(linea = v) }
@@ -82,6 +89,13 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
     fun onMelanosisChange(v: String)  { ui.value = ui.value.copy(melanosis = cleanPct(v)) }
     fun onCrackingChange(v: String)   { ui.value = ui.value.copy(cracking = cleanPct(v)) }
     fun onGapingChange(v: String)     { ui.value = ui.value.copy(gaping = cleanPct(v)) }
+
+    // --- NUEVO: Función para agregar foto ---
+    fun agregarFoto(uri: String) {
+        val listaActual = ui.value.fotosUris.toMutableList()
+        listaActual.add(uri)
+        ui.value = ui.value.copy(fotosUris = listaActual)
+    }
 
     fun guardar(onSuccess: (String) -> Unit) {
         val s = ui.value
@@ -99,6 +113,12 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
         viewModelScope.launch {
             ui.value = ui.value.copy(guardando = true, error = null)
             val id = s.id ?: UUID.randomUUID().toString()
+
+            // Convertimos strings URIs a Objetos Evidencia
+            val evidenciasObj = s.fotosUris.map { uri ->
+                Evidencia(uriLocal = uri)
+            }
+
             val reporte = Reporte(
                 id = id,
                 titulo = s.titulo.trim(),
@@ -114,7 +134,8 @@ class FormViewModel(app: Application): AndroidViewModel(app) {
                 melanosis = m.coerceIn(0, 100),
                 cracking = c.coerceIn(0, 100),
                 gaping = g.coerceIn(0, 100),
-                evidencias = emptyList(),
+                // Aquí asignamos las evidencias
+                evidencias = evidenciasObj,
                 creadoPor = null,
                 asignadoA = null
             )

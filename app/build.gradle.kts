@@ -86,8 +86,10 @@ dependencies {
     implementation("androidx.compose.material3:material3:<última>")
     implementation("androidx.compose.material:material-icons-extended:<última>")
 
-
-
+// RED (Retrofit + OkHttp) para Microservicios y API Externa
+    implementation(libs.squareup.retrofit)
+    implementation(libs.squareup.retrofit.gson)
+    implementation(libs.squareup.okhttp.logging)
 
     // JSON (si lo usas)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
@@ -102,4 +104,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // Tests Unitarios (Para IL3.2)
+    testImplementation(libs.junit)
+    // Mockk o Mockito son recomendados, pero usaremos JUnit puro para simplificar
 }

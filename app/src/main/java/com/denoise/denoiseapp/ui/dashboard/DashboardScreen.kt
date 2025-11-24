@@ -25,28 +25,15 @@ import com.denoise.denoiseapp.ui.components.ConnectivityBanner
 import com.denoise.denoiseapp.ui.components.MinimalTopBar
 import kotlin.math.roundToInt
 
-data class DashboardUiState(
-    val totalReportes: Int = 0,
-    val porcentajeInfectados: Int = 0,
-    val melanosis: Int = 0,
-    val cracking: Int = 0,
-    val gaping: Int = 0
-)
-
 @Composable
 fun DashboardScreen(
     onIrALista: () -> Unit,
     onOpenSettings: () -> Unit = {},
-    onOpenDashboard: () -> Unit = {},
-    state: DashboardUiState = DashboardUiState()
+    onOpenDashboard: () -> Unit = {}
 ) {
     val vm: DashboardViewModel = viewModel()
-    val repoState by vm.state.collectAsState()
+    val state by vm.state.collectAsState() // Estado real del ViewModel
     val isOnline by rememberConnectivityState()
-
-    val live = remember(repoState.items, repoState.loading) {
-        if (repoState.loading) state else mapToLegacyStateFromFields(repoState.items)
-    }
 
     Scaffold(
         topBar = {
@@ -64,6 +51,8 @@ fun DashboardScreen(
         ) {
             ConnectivityBanner(isOnline = isOnline)
 
+            // (Sección de API Externa eliminada aquí porque se movió a WeatherScreen)
+
             val scroll = rememberScrollState()
             Column(
                 Modifier
@@ -72,6 +61,13 @@ fun DashboardScreen(
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+
+                // Calculamos KPIs en vivo basados en el estado del VM
+                val avgInfectados = calcAvg(state.items) { it.porcentajeInfectados }
+                val avgMelanosis = calcAvg(state.items) { it.melanosis }
+                val avgCracking = calcAvg(state.items) { it.cracking }
+                val avgGaping = calcAvg(state.items) { it.gaping }
+
                 // Fila superior
                 Row(
                     Modifier.fillMaxWidth(),
@@ -79,14 +75,14 @@ fun DashboardScreen(
                 ) {
                     AccentKpiSquare(
                         title = "Reportes",
-                        value = "${live.totalReportes}",
+                        value = "${state.total}",
                         container = TileYellow,
                         modifier = Modifier.weight(1f),
                         height = 160.dp
                     )
                     AccentKpiSquare(
                         title = "% Infectados",
-                        value = "${live.porcentajeInfectados}%",
+                        value = "$avgInfectados%",
                         container = TilePink,
                         modifier = Modifier.weight(1f),
                         height = 160.dp
@@ -96,9 +92,9 @@ fun DashboardScreen(
                 // Tile ancho con 3 KPIs
                 AccentKpiWide(
                     title = "Condiciones promedio",
-                    left = "Melanosis" to "${live.melanosis}%",
-                    center = "Cracking" to "${live.cracking}%",
-                    right = "Gaping" to "${live.gaping}%",
+                    left = "Melanosis" to "$avgMelanosis%",
+                    center = "Cracking" to "$avgCracking%",
+                    right = "Gaping" to "$avgGaping%",
                     container = TilePurple,
                     height = 156.dp,
                     modifier = Modifier.fillMaxWidth()
@@ -110,8 +106,12 @@ fun DashboardScreen(
     }
 }
 
-/* ---------- Tiles ---------- */
+private fun calcAvg(items: List<Reporte>, selector: (Reporte) -> Int): Int {
+    if (items.isEmpty()) return 0
+    return items.map { selector(it).coerceIn(0, 100) }.average().roundToInt()
+}
 
+/* ---------- Tiles y Componentes visuales (Mismos de antes) ---------- */
 @Composable
 private fun AccentKpiSquare(
     title: String,
@@ -120,8 +120,7 @@ private fun AccentKpiSquare(
     modifier: Modifier = Modifier,
     height: Dp = 160.dp
 ) {
-    val on = Color.White // texto siempre blanco
-
+    val on = Color.White
     Surface(
         modifier = modifier.height(height),
         color = container,
@@ -136,19 +135,14 @@ private fun AccentKpiSquare(
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = on,
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 16.dp)
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 16.dp)
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
                 color = on.copy(alpha = 0.9f),
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(16.dp)
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
             )
-            // (Sin botón VER)
         }
     }
 }
@@ -163,8 +157,7 @@ private fun AccentKpiWide(
     height: Dp,
     modifier: Modifier = Modifier
 ) {
-    val on = Color.White // texto siempre blanco
-
+    val on = Color.White
     Surface(
         modifier = modifier.height(height),
         color = container,
@@ -173,28 +166,14 @@ private fun AccentKpiWide(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = on.copy(alpha = 0.95f)
-            )
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium, color = on.copy(alpha = 0.95f))
             Spacer(Modifier.height(10.dp))
-
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TripleKpi(on, left, Modifier.weight(1f))
                 TripleKpi(on, center, Modifier.weight(1f))
                 TripleKpi(on, right, Modifier.weight(1f))
             }
-
-            // (Sin dot e indicador, ni botón VER)
         }
     }
 }
@@ -202,41 +181,11 @@ private fun AccentKpiWide(
 @Composable
 private fun TripleKpi(on: Color, pair: Pair<String, String>, modifier: Modifier = Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = pair.second,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = on
-        )
-        Text(
-            text = pair.first,
-            style = MaterialTheme.typography.labelLarge,
-            color = on.copy(alpha = 0.95f),
-            textAlign = TextAlign.Center
-        )
+        Text(text = pair.second, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = on)
+        Text(text = pair.first, style = MaterialTheme.typography.labelLarge, color = on.copy(alpha = 0.95f), textAlign = TextAlign.Center)
     }
 }
 
-/* ---------- Colores de tiles ---------- */
 private val TileYellow = Color(0xFFFFD54F)
 private val TilePink   = Color(0xFFFF6D8D)
 private val TilePurple = Color(0xFF8E8DFF)
-
-/* ---------- KPIs (clamp 0–100) ---------- */
-private fun mapToLegacyStateFromFields(reportes: List<Reporte>): DashboardUiState {
-    if (reportes.isEmpty()) return DashboardUiState()
-
-    fun avg(selector: (Reporte) -> Int): Int =
-        reportes.map { selector(it).coerceIn(0, 100) }
-            .average()
-            .roundToInt()
-            .coerceIn(0, 100)
-
-    return DashboardUiState(
-        totalReportes = reportes.size,
-        porcentajeInfectados = avg { it.porcentajeInfectados },
-        melanosis = avg { it.melanosis },
-        cracking = avg { it.cracking },
-        gaping = avg { it.gaping }
-    )
-}

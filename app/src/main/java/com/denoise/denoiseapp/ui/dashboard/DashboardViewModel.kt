@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class DashboardUiState(
@@ -30,22 +31,30 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<DashboardUiState> = _state.asStateFlow()
 
     init {
+        // Cargar Reportes (Sincronizados con Microservicio via Repository)
+        cargarReportes()
+    }
+
+    private fun cargarReportes() {
         viewModelScope.launch {
             getReports()
-                .onStart { _state.value = _state.value.copy(loading = true, error = null) }
-                .catch { e -> _state.value = _state.value.copy(loading = false, error = e.message) }
+                .onStart { _state.update { it.copy(loading = true, error = null) } }
+                .catch { e -> _state.update { it.copy(loading = false, error = e.message) } }
                 .collect { list ->
                     val total = list.size
                     val porEstado = list.groupingBy { it.estado }.eachCount()
                     val recientes = list.sortedByDescending { it.fechaCreacionMillis ?: 0L }.take(5)
-                    _state.value = DashboardUiState(
-                        loading = false,
-                        items = list,
-                        total = total,
-                        porEstado = porEstado,
-                        recientes = recientes,
-                        error = null
-                    )
+
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            items = list,
+                            total = total,
+                            porEstado = porEstado,
+                            recientes = recientes,
+                            error = null
+                        )
+                    }
                 }
         }
     }
