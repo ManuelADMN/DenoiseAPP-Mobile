@@ -12,7 +12,7 @@ object RetrofitClient {
 
     // URL 1: Tus Microservicios (Spring Boot)
     // Usa 10.0.2.2 si es emulador, o tu IP local (ej. 192.168.1.X) si es celular físico.
-    private const val BASE_URL_MICROSERVICE = "http://10.0.2.2:8080/"
+    private const val BASE_URL_MICROSERVICE = "http://192.168.31.204:8080/"
 
     // URL 2: API Externa (Open-Meteo)
     private const val BASE_URL_EXTERNAL = "https://api.open-meteo.com/"
