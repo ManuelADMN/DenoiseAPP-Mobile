@@ -1,17 +1,26 @@
 package com.denoise.denoiseapp.ui.report.detail
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.denoise.denoiseapp.presentation.report.DetailViewModel
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack // Icono correcto para evitar warnings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image // Icono para placeholder si falla carga
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,9 +35,8 @@ fun ReportDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle") },
+                title = { Text("Detalle del Reporte") },
                 navigationIcon = {
-                    // Usamos AutoMirrored para soportar idiomas RTL (Right-To-Left) correctamente
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
                     }
@@ -43,46 +51,121 @@ fun ReportDetailScreen(
     ) { pad ->
         when {
             state.loading -> {
-                Box(Modifier.padding(pad).fillMaxSize()) {
+                Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
             state.reporte == null -> {
-                Box(Modifier.padding(pad).fillMaxSize()) {
-                    Text("No encontrado")
+                Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Reporte no encontrado", style = MaterialTheme.typography.titleMedium)
                 }
             }
             else -> {
-                val r = state.reporte
+                val r = state.reporte!!
                 Column(
                     Modifier
                         .padding(pad)
                         .padding(16.dp)
                         .fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp) // Mayor espaciado
                 ) {
-                    Text(r!!.titulo, style = MaterialTheme.typography.headlineSmall)
-                    Text("Planta: ${r.planta.nombre}")
-
-                    r.lote?.let { Text("Lote: $it") }
-                    r.linea?.let { Text("Línea: $it") }
-
-                    AnimatedContent(targetState = r.estado, label = "estadoAnim") { est ->
-                        AssistChip(onClick = {}, label = { Text("Estado: $est") })
+                    // Encabezado
+                    Column {
+                        Text(r.titulo, style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Planta: ${r.planta.nombre}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
-                    r.notas?.let { Text("Notas: $it") }
+                    HorizontalDivider()
 
-                    Spacer(Modifier.height(16.dp))
+                    // Datos Clave
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Lote", style = MaterialTheme.typography.labelMedium)
+                            Text(r.lote ?: "---", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Column {
+                            Text("Línea", style = MaterialTheme.typography.labelMedium)
+                            Text(r.linea ?: "---", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Column {
+                            Text("Estado", style = MaterialTheme.typography.labelMedium)
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(r.estado.name) },
+                                modifier = Modifier.height(24.dp)
+                            )
+                        }
+                    }
+
+                    // Notas
+                    if (!r.notas.isNullOrBlank()) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(Modifier.padding(12.dp).fillMaxWidth()) {
+                                Text("Notas:", style = MaterialTheme.typography.labelSmall)
+                                Text(r.notas, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+
+                    // --- SECCIÓN DE EVIDENCIAS (Aquí está la clave) ---
+                    Text("Evidencias (${r.evidencias.size})", style = MaterialTheme.typography.titleMedium)
+
+                    if (r.evidencias.isNotEmpty()) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(140.dp)
+                        ) {
+                            items(r.evidencias) { evidencia ->
+                                // Usamos una tarjeta para cada imagen
+                                Card(
+                                    shape = RoundedCornerShape(12.dp),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                    modifier = Modifier.size(140.dp)
+                                ) {
+                                    Box(Modifier.fillMaxSize()) {
+                                        AsyncImage(
+                                            model = evidencia.uriLocal,
+                                            contentDescription = "Evidencia Fotográfica",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize(),
+                                            // Si falla la carga (ej: archivo borrado), mostramos un ícono
+                                            error = null, // Opcional: poner un painter resource si tienes
+                                            placeholder = null
+                                        )
+
+                                        // Si la imagen no carga, AsyncImage dejará el espacio vacío.
+                                        // Podemos poner un fallback visual si Coil falla:
+                                        if (evidencia.uriLocal.isNullOrBlank()) {
+                                            Icon(
+                                                imageVector = Icons.Default.Image,
+                                                contentDescription = null,
+                                                modifier = Modifier.align(Alignment.Center),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Text(
+                            "No hay evidencias adjuntas.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                    // -------------------------------------------------
+
+                    Spacer(Modifier.weight(1f)) // Empuja los botones al fondo
 
                     // Botones de acción
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { onEdit() }
-                        ) {
-                            Text("Editar")
-                        }
-
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         OutlinedButton(
                             onClick = {
                                 vm.eliminar(r.id) {
@@ -90,11 +173,17 @@ fun ReportDetailScreen(
                                     onBack()
                                 }
                             },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text("Eliminar")
+                        }
+
+                        Button(
+                            onClick = { onEdit() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Editar")
                         }
                     }
                 }

@@ -2,6 +2,7 @@ package com.denoise.denoiseapp.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.denoise.denoiseapp.domain.model.Evidencia
 import com.denoise.denoiseapp.domain.model.Planta
 import com.denoise.denoiseapp.domain.model.Reporte
 import com.denoise.denoiseapp.domain.model.ReporteEstado
@@ -27,12 +28,17 @@ data class ReportEntity(
     val porcentajeInfectados: Int,
     val melanosis: Int,
     val cracking: Int,
-    val gaping: Int
+    val gaping: Int,
+
+    // CAMPO NUEVO: Lista de rutas de fotos
+    // Room usará el TypeConverter que definimos en AppDatabase para guardar esto
+    val fotosUris: List<String> = emptyList()
 )
 
 private fun parseEstado(s: String): ReporteEstado =
     runCatching { ReporteEstado.valueOf(s) }.getOrElse { ReporteEstado.PENDIENTE }
 
+// Mapeo de Entidad (BD) a Dominio (App)
 fun ReportEntity.toDomain(): Reporte = Reporte(
     id = id,
     titulo = titulo,
@@ -47,12 +53,14 @@ fun ReportEntity.toDomain(): Reporte = Reporte(
     melanosis = melanosis,
     cracking = cracking,
     gaping = gaping,
-    evidencias = emptyList(),
+    // RECUPERACIÓN: Convertimos la lista de strings guardada a objetos Evidencia
+    evidencias = fotosUris.map { uri -> Evidencia(uriLocal = uri) },
     creadoPor = creadoPor,
     asignadoA = asignadoA,
     ultimaActualizacionMillis = ultimaActualizacionMillis
 )
 
+// Mapeo de Dominio (App) a Entidad (BD)
 fun Reporte.toEntity(): ReportEntity = ReportEntity(
     id = id,
     titulo = titulo,
@@ -71,5 +79,7 @@ fun Reporte.toEntity(): ReportEntity = ReportEntity(
     porcentajeInfectados = porcentajeInfectados.coerceIn(0, 100),
     melanosis = melanosis.coerceIn(0, 100),
     cracking = cracking.coerceIn(0, 100),
-    gaping = gaping.coerceIn(0, 100)
+    gaping = gaping.coerceIn(0, 100),
+    // GUARDADO: Extraemos las URIs locales de los objetos Evidencia para guardarlas
+    fotosUris = evidencias.mapNotNull { it.uriLocal }
 )

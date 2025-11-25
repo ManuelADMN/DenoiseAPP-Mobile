@@ -5,17 +5,22 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -42,25 +47,26 @@ fun ReportFormScreen(
     val context = LocalContext.current
     val state by vm.ui
 
+    // Estado para el scroll de la pantalla
+    val scrollState = rememberScrollState()
+
     // Variable para guardar la URI temporal de la foto que se va a tomar
     var tempUri by remember { mutableStateOf<Uri?>(null) }
 
-    // 1. Launcher para la cámara: Recibe true si la foto se tomó con éxito
+    // 1. Launcher para la cámara
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && tempUri != null) {
-            // Si fue exitoso, agregamos la URI a la lista del ViewModel
             vm.agregarFoto(tempUri.toString())
         }
     }
 
-    // 2. Launcher para pedir permisos: Si acepta, crea el archivo y lanza la cámara
+    // 2. Launcher para pedir permisos
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // CORRECCIÓN: Usamos '_' para descartar la variable 'file' que no usamos aquí
             val (_, uri) = crearArchivoTemporal(context)
             tempUri = uri
             cameraLauncher.launch(uri)
@@ -86,7 +92,8 @@ fun ReportFormScreen(
             modifier = Modifier
                 .padding(padding)
                 .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState), // <--- AQUÍ AGREGAMOS EL SCROLL
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // --- CAMPOS DE TEXTO ---
@@ -160,7 +167,6 @@ fun ReportFormScreen(
             MinimalSection("Evidencias")
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Botón para abrir la cámara
                 OutlinedButton(
                     onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                     modifier = Modifier.padding(end = 12.dp)
@@ -170,22 +176,26 @@ fun ReportFormScreen(
                     Text("Tomar Foto")
                 }
 
-                // Mensaje si no hay fotos
                 if (state.fotosUris.isEmpty()) {
                     Text("Sin fotos", style = MaterialTheme.typography.bodySmall)
                 }
             }
 
-            // Galería horizontal de fotos tomadas
+            // Galería horizontal de fotos tomadas (TAMAÑO AUMENTADO)
             LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().height(110.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp) // Aumentado a 280dp
+                    .padding(vertical = 8.dp)
             ) {
                 items(state.fotosUris) { uriStr ->
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(100.dp)
+                        modifier = Modifier
+                            .size(260.dp) // Aumentado a 260dp para que sea bien grande
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                     ) {
                         AsyncImage(
                             model = uriStr,
@@ -197,28 +207,19 @@ fun ReportFormScreen(
                 }
             }
 
-            Spacer(Modifier.height(48.dp)) // Espacio final para que el FAB no tape contenido
+            // Espacio extra al final para que el FAB no tape la última parte al hacer scroll
+            Spacer(Modifier.height(80.dp))
         }
     }
 }
 
-/**
- * Función auxiliar para crear un archivo temporal seguro donde la cámara guardará la foto.
- * Retorna el archivo (File) y su URI segura (usando FileProvider).
- */
 private fun crearArchivoTemporal(context: Context): Pair<File, Uri> {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
     val nombre = "JPEG_${timeStamp}_"
-
-    // Usamos la caché de la app para no ensuciar la galería pública
     val directorio = File(context.cacheDir, "images")
     if (!directorio.exists()) directorio.mkdirs()
-
     val file = File.createTempFile(nombre, ".jpg", directorio)
-
-    // Generamos la URI usando el FileProvider configurado en el Manifest
     val authority = "${context.packageName}.fileprovider"
     val uri = FileProvider.getUriForFile(context, authority, file)
-
     return Pair(file, uri)
 }
