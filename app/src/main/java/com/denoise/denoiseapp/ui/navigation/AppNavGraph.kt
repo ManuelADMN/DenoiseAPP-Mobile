@@ -7,17 +7,21 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ListAlt // Icono corregido (espejado)
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
+import androidx.compose.material.icons.filled.SupervisedUserCircle
 import androidx.compose.material.icons.outlined.Assessment
-import androidx.compose.material.icons.outlined.Map // Icono para el mapa
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -27,9 +31,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.denoise.denoiseapp.core.ui.theme.DenoiseTheme
+import com.denoise.denoiseapp.core.util.SessionManager
 import com.denoise.denoiseapp.presentation.report.DetailViewModel
 import com.denoise.denoiseapp.presentation.report.FormViewModel
 import com.denoise.denoiseapp.presentation.report.ListViewModel
+import com.denoise.denoiseapp.ui.admin.AdminUsersScreen
+import com.denoise.denoiseapp.ui.auth.LoginScreen
+import com.denoise.denoiseapp.ui.auth.RegisterScreen
 import com.denoise.denoiseapp.ui.dashboard.DashboardScreen
 import com.denoise.denoiseapp.ui.report.detail.ReportDetailScreen
 import com.denoise.denoiseapp.ui.report.form.ReportFormScreen
@@ -37,56 +45,83 @@ import com.denoise.denoiseapp.ui.report.list.ReportListScreen
 import com.denoise.denoiseapp.ui.settings.SettingsScreen
 import com.denoise.denoiseapp.ui.weather.WeatherScreen
 
-// Definición de todas las rutas de navegación
 object Routes {
+    const val LOGIN = "login"
+    const val REGISTER = "register"
     const val DASHBOARD = "dashboard"
     const val LIST = "list"
-    const val MAPA = "mapa" // Nueva ruta para el mapa/clima
+    const val MAPA = "mapa"
     const val FORM = "form"
     const val DETAIL = "detail/{id}"
     const val SETTINGS = "settings"
+    const val ADMIN_USERS = "admin_users"
 }
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavGraph(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
-    var darkTheme by rememberSaveable { mutableStateOf(false) } // Estado simple para el tema
+    var darkTheme by rememberSaveable { mutableStateOf(false) }
+
+    // --- CONTROL DE SESIÓN ---
+    val context = LocalContext.current
+    // Recordamos el SessionManager para no recrearlo en cada recomposición
+    val session = remember { SessionManager(context) }
+
+    // Decidimos la pantalla de inicio: Dashboard si ya está logueado, sino Login
+    val startRoute = if (session.isLoggedIn()) Routes.DASHBOARD else Routes.LOGIN
 
     DenoiseTheme(darkTheme = darkTheme) {
 
-        // Obtenemos la ruta actual para saber qué botón de la barra inferior resaltar
-        val currentRoute = nav.currentBackStackEntryAsState().value
-            ?.destination?.route.normalize()
+        // Observamos la ruta actual. Esto fuerza la recomposición cuando navegamos.
+        val navBackStackEntry by nav.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route.normalize()
 
-        // Pantallas que deben mostrar la barra de navegación inferior
-        val showBottomBar = currentRoute in setOf(Routes.LIST, Routes.DASHBOARD, Routes.MAPA, Routes.SETTINGS)
+        // Calculamos isAdmin AQUÍ, dependiente de currentRoute.
+        // Así, cada vez que navegamos (ej. Login -> Dashboard), se verifica el rol de nuevo.
+        val isAdmin = remember(currentRoute) { session.isAdmin() }
+
+        // Definimos en qué pantallas se debe mostrar la barra de navegación inferior
+        val showBottomBar = currentRoute in setOf(
+            Routes.LIST,
+            Routes.DASHBOARD,
+            Routes.MAPA,
+            Routes.SETTINGS,
+            Routes.ADMIN_USERS
+        )
 
         Scaffold(
             bottomBar = {
                 if (showBottomBar) {
-                    val backRoute = nav.currentBackStackEntryAsState().value
-                        ?.destination?.route.normalize()
-
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ) {
-                        val items = listOf(
-                            // Usamos Icons.AutoMirrored.Outlined.ListAlt para evitar el warning de deprecación
+                        val items = mutableListOf(
                             Triple(Routes.LIST, "Reportes", Icons.AutoMirrored.Outlined.ListAlt),
                             Triple(Routes.DASHBOARD, "Dash", Icons.Outlined.Assessment),
-                            Triple(Routes.MAPA, "Mapa", Icons.Outlined.Map), // Nuevo botón de Mapa
-                            Triple(Routes.SETTINGS, "Ajustes", Icons.Outlined.Settings)
+                            Triple(Routes.MAPA, "Mapa", Icons.Outlined.Map)
                         )
+
+                        // Botón Extra solo para Admin
+                        if (isAdmin) {
+                            items.add(Triple(Routes.ADMIN_USERS, "Usuarios", Icons.Default.SupervisedUserCircle))
+                        }
+
+                        // Ajustes siempre visible
+                        items.add(Triple(Routes.SETTINGS, "Ajustes", Icons.Outlined.Settings))
+
                         items.forEach { (route, label, icon) ->
-                            val selected = backRoute == route
+                            // CORRECCIÓN: Usamos directamente 'currentRoute' que declaramos arriba
+                            // y eliminamos la referencia a 'backRoute' que daba error
+                            val isSelected = currentRoute == route
+
                             NavigationBarItem(
-                                selected = selected,
+                                selected = isSelected,
                                 onClick = {
-                                    if (!selected) {
+                                    if (!isSelected) {
                                         nav.navigate(route) {
-                                            // Evita crear múltiples copias de la misma pantalla en el stack
+                                            // PopUp hasta el inicio del grafo para no acumular pantallas
                                             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = true
@@ -104,18 +139,37 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
             Box(Modifier.padding(innerPadding)) {
                 NavHost(
                     navController = nav,
-                    startDestination = Routes.DASHBOARD,
+                    startDestination = startRoute,
                     modifier = modifier
                 ) {
-                    // 1. PANTALLA DASHBOARD
-                    composable(Routes.DASHBOARD) {
-                        // Llamada limpia sin argumentos extraños
-                        DashboardScreen(
-                            onOpenSettings = { nav.navigate(Routes.SETTINGS) }
+                    // --- AUTENTICACIÓN ---
+                    composable(Routes.LOGIN) {
+                        LoginScreen(
+                            onLoginSuccess = {
+                                nav.navigate(Routes.DASHBOARD) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true } // Borra login del historial
+                                }
+                            },
+                            onNavigateToRegister = { nav.navigate(Routes.REGISTER) }
+                        )
+                    }
+                    composable(Routes.REGISTER) {
+                        RegisterScreen(
+                            onRegisterSuccess = {
+                                nav.navigate(Routes.DASHBOARD) {
+                                    popUpTo(Routes.LOGIN) { inclusive = true }
+                                }
+                            },
+                            onBack = { nav.popBackStack() }
                         )
                     }
 
-                    // 2. PANTALLA LISTA DE REPORTES
+                    // --- PANTALLAS PRINCIPALES ---
+
+                    composable(Routes.DASHBOARD) {
+                        DashboardScreen(onOpenSettings = { nav.navigate(Routes.SETTINGS) })
+                    }
+
                     composable(Routes.LIST) {
                         val vm: ListViewModel = viewModel()
                         ReportListScreen(
@@ -127,12 +181,11 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    // 3. PANTALLA MAPA / CLIMA (NUEVA)
                     composable(Routes.MAPA) {
-                        WeatherScreen()
+                        WeatherScreen(isAdmin = isAdmin) // Pasamos permiso de Admin al Mapa
                     }
 
-                    // 4. PANTALLA FORMULARIO (Crear/Editar)
+                    // --- FORMULARIO DE REPORTE ---
                     composable(
                         route = "${Routes.FORM}?id={id}",
                         arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true })
@@ -140,10 +193,17 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         val vm: FormViewModel = viewModel()
                         val id = backStackEntry.arguments?.getString("id")
                         if (id != null) vm.cargarParaEditar(id)
-                        ReportFormScreen(vm = vm, onSaved = { nav.popBackStack(Routes.LIST, inclusive = false) })
+
+                        ReportFormScreen(
+                            vm = vm,
+                            onSaved = {
+                                // Navegación segura al guardar
+                                nav.popBackStack()
+                            }
+                        )
                     }
 
-                    // 5. PANTALLA DETALLE DE REPORTE
+                    // --- DETALLE DE REPORTE ---
                     composable(
                         Routes.DETAIL,
                         arguments = listOf(navArgument("id") { type = NavType.StringType })
@@ -151,12 +211,38 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
                         val vm: DetailViewModel = viewModel()
                         val id = backStackEntry.arguments?.getString("id")!!
                         vm.cargar(id)
-                        ReportDetailScreen(vm = vm, onEdit = { nav.navigate("form?id=$id") }, onBack = { nav.popBackStack() })
+
+                        ReportDetailScreen(
+                            vm = vm,
+                            onEdit = { nav.navigate("form?id=$id") },
+                            onBack = { nav.popBackStack() },
+                            isAdmin = isAdmin // Pasamos el rol para activar funciones de admin
+                        )
                     }
 
-                    // 6. PANTALLA AJUSTES
+                    // --- AJUSTES (Con Logout) ---
                     composable(Routes.SETTINGS) {
-                        SettingsScreen(isDarkTheme = darkTheme, onToggleTheme = { darkTheme = it })
+                        SettingsScreen(
+                            isDarkTheme = darkTheme,
+                            onToggleTheme = { darkTheme = it },
+                            onLogout = {
+                                session.logout()
+                                // Redirige al login y borra todo el stack anterior
+                                nav.navigate(Routes.LOGIN) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // --- ADMINISTRACIÓN DE USUARIOS (Solo Admin) ---
+                    composable(Routes.ADMIN_USERS) {
+                        if (!isAdmin) {
+                            // Protección: Si entra por URL y no es admin, lo mandamos al dashboard
+                            LaunchedEffect(Unit) { nav.navigate(Routes.DASHBOARD) }
+                        } else {
+                            AdminUsersScreen()
+                        }
                     }
                 }
             }
@@ -164,9 +250,9 @@ fun AppNavGraph(modifier: Modifier = Modifier) {
     }
 }
 
-// Función auxiliar para limpiar la ruta y saber en qué pantalla "base" estamos
+// Helper para normalizar rutas y determinar qué botón resaltar en la barra inferior
 private fun String?.normalize(): String {
-    val raw = this ?: return Routes.DASHBOARD
+    val raw = this ?: return Routes.LOGIN
     val base = raw.substringBefore("?")
     return when {
         base.startsWith("detail") || base.startsWith("form") -> Routes.LIST
