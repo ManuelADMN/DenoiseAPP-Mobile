@@ -16,7 +16,7 @@ interface ReportDao {
     @Query("SELECT * FROM reports WHERE id = :id LIMIT 1")
     fun getById(id: String): Flow<ReportEntity?>
 
-    // -- ESTA ES LA FUNCIÓN QUE TE FALTA --
+    // - ESTA ES LA FUNCIÓN QUE TE FALTA -
     @Query("SELECT count(*) > 0 FROM reports WHERE id = :id")
     suspend fun exists(id: String): Boolean
 
