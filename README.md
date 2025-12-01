@@ -1,4 +1,4 @@
-# README – Justificación de criterios de evaluación
+# Denoise APP
 
 Este documento justifica, con ejemplos de código concretos, cómo el proyecto **DenoiseAPP Mobile + Backend Spring Boot** cumple cada uno de los criterios solicitados.
 
