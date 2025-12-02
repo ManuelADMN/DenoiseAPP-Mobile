@@ -11,11 +11,16 @@ coil = "2.6.0"
 retrofit = "2.9.0"
 okhttp = "4.12.0"
 playServicesLocation = "21.1.0" # Geolocalización
-osmdroid = "6.1.16" # NUEVA VERSIÓN PARA MAPAS
+osmdroid = "6.1.16"             # Mapas
 junit = "4.13.2"
 androidxJunit = "1.1.5"
 espresso = "3.5.1"
 uiUnit = "1.6.1"
+
+# --- Firebase / Google ---
+firebase-bom = "33.5.1"         # BoM compatible con Kotlin 1.9.x (evita measurement 23.x)
+gms = "4.4.4"                   # Google Services plugin
+crashlyticsGradle = "3.0.6"     # Crashlytics Gradle plugin
 
 [libraries]
 # Core Android
@@ -35,15 +40,15 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 # Navigation
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
 
-# Room (Base de Datos Local)
+# Room
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
-# Coil (Carga de Imágenes)
+# Coil
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
-# Retrofit (Red / API)
+# Retrofit / OkHttp
 squareup-retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 squareup-retrofit-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 squareup-okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
@@ -51,8 +56,16 @@ squareup-okhttp-logging = { module = "com.squareup.okhttp3:logging-interceptor",
 # Google Location Services (GPS)
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
-# OSMDroid (Mapas OpenStreetMap) - NUEVA LIBRERÍA
+# OSMDroid (OpenStreetMap)
 osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
+
+# --- Firebase (usar con BoM) ---
+firebase-bom         = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-firestore   = { module = "com.google.firebase:firebase-firestore" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+# (opcional) firebase-database = { module = "com.google.firebase:firebase-database" }
+# (opcional) firebase-auth     = { module = "com.google.firebase:firebase-auth" }
+# (opcional) firebase-messaging= { module = "com.google.firebase:firebase-messaging" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -63,6 +76,10 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
 androidx-compose-ui-unit = { group = "androidx.compose.ui", name = "ui-unit", version.ref = "uiUnit" }
 
 [plugins]
-android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android       = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+android-application     = { id = "com.android.application", version.ref = "agp" }
+kotlin-android          = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 com-google-devtools-ksp = { id = "com.google.devtools.ksp", version = "1.9.22-1.0.17" }
+
+# Firebase / Google plugins (usados como libs.plugins.google.services y libs.plugins.firebase.crashlytics)
+google-services         = { id = "com.google.gms.google-services",  version.ref = "gms" }
+firebase-crashlytics    = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsGradle" }

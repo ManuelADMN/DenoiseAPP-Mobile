@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.denoise.denoiseapp.core.util.SessionManager
+import com.denoise.denoiseapp.data.remote.firestore.FirestoreUsuariosRepository
 import com.denoise.denoiseapp.data.repository.UserRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -17,17 +18,17 @@ sealed class AuthEvent {
 
 class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
-    // Inicializamos el repositorio con el contexto de la aplicación
+    // Repositorio y sesión
     private val repo = UserRepository(app)
     private val session = SessionManager(app)
 
-    // Estados observables para la UI (Campos de texto y Carga)
+    // Estados UI
     var email = androidx.compose.runtime.mutableStateOf("")
     var password = androidx.compose.runtime.mutableStateOf("")
     var name = androidx.compose.runtime.mutableStateOf("")
     var isLoading = androidx.compose.runtime.mutableStateOf(false)
 
-    // Canal para comunicar eventos únicos a la UI
+    // Eventos one-shot
     private val _events = Channel<AuthEvent>()
     val events = _events.receiveAsFlow()
 
@@ -44,7 +45,25 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 isLoading.value = false
 
                 if (user != null) {
+                    // Guardar en sesión
                     session.saveUser(user)
+
+                    // --- Firestore: upsert usuario (best-effort) ---
+                    runCatching {
+                        val uid = user.id.ifEmpty { user.email }
+                        val rolStr: String? = user.rol?.toString() ?: null
+                        FirestoreUsuariosRepository.upsertFromFields(
+                            id = uid,
+                            nombre = user.nombre,
+                            email = user.email,
+                            rol = rolStr,
+                            extras = mapOf(
+                                "lastLoginMillis" to System.currentTimeMillis(),
+                                "event" to "login"
+                            )
+                        )
+                    }
+
                     _events.send(AuthEvent.NavigateToHome)
                 } else {
                     sendError("Credenciales incorrectas")
@@ -69,7 +88,25 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 isLoading.value = false
 
                 if (user != null) {
+                    // Guardar en sesión
                     session.saveUser(user)
+
+                    // --- Firestore: creación/actualización usuario (best-effort) ---
+                    runCatching {
+                        val uid = user.id.ifEmpty { user.email }
+                        val rolStr: String? = user.rol?.toString() ?: null
+                        FirestoreUsuariosRepository.upsertFromFields(
+                            id = uid,
+                            nombre = user.nombre,
+                            email = user.email,
+                            rol = rolStr,
+                            extras = mapOf(
+                                "createdAtMillis" to System.currentTimeMillis(),
+                                "event" to "register"
+                            )
+                        )
+                    }
+
                     _events.send(AuthEvent.NavigateToHome)
                 } else {
                     sendError("El email ya está registrado")
@@ -82,8 +119,6 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun sendError(msg: String) {
-        viewModelScope.launch {
-            _events.send(AuthEvent.ShowError(msg))
-        }
+        viewModelScope.launch { _events.send(AuthEvent.ShowError(msg)) }
     }
 }

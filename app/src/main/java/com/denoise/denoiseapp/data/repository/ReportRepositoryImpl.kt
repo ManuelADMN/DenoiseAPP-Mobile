@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
+// --- Firestore ---
+import com.denoise.denoiseapp.data.remote.firestore.FirestoreReportesRepository
+
 class ReportRepositoryImpl(
     appContext: Context
 ) : ReportRepository {
@@ -43,13 +46,13 @@ class ReportRepositoryImpl(
         dao.getById(id).map { e -> runCatching { e?.toDomain() }.getOrNull() }
 
     override suspend fun upsert(reporte: Reporte) {
-        // 1. Verificar si ya existe localmente ANTES de guardar lo nuevo
+        // 1) Verificar existencia local para decidir POST/PUT
         val existe = dao.exists(reporte.id)
 
-        // 2. Guardar en Local (siempre, para que la UI responda rápido)
+        // 2) Guardar LOCAL (optimistic UI)
         dao.upsert(reporte.toEntity())
 
-        // 3. Enviar al Backend: Decidir si es POST (Crear) o PUT (Actualizar)
+        // 3) Backend REST (no bloquear si falla)
         try {
             if (existe) {
                 Log.d("Repo", "El reporte ya existe. Enviando PUT (Update)...")
@@ -61,23 +64,34 @@ class ReportRepositoryImpl(
         } catch (e: Exception) {
             Log.e("Repo", "Fallo subida a backend: ${e.message}")
         }
+
+        // 4) Firestore (best-effort, ID = id del dominio)
+        try {
+            FirestoreReportesRepository.upsertFromDomain(reporte)
+        } catch (e: Exception) {
+            Log.e("Repo", "Fallo subida a Firestore: ${e.message}")
+        }
     }
 
-    // --- AQUÍ ESTÁ LA FUNCIÓN QUE TE FALTABA ---
+    // Implementación del nuevo método de la interfaz
     suspend fun deleteWithUser(id: String, user: String) {
         // 1. Borrado local inmediato
         dao.deleteById(id)
 
-        // 2. Borrado remoto enviando el usuario
+        // 2. Borrado remoto enviando el usuario para trazabilidad
         try {
             api.deleteReport(id, user)
             Log.d("Repo", "Eliminado del backend por $user")
         } catch (e: Exception) {
             Log.e("Repo", "Fallo borrado en backend: ${e.message}")
         }
+
+        // 3. (Opcional) Borrar también en Firestore (best-effort)
+        runCatching { FirestoreReportesRepository.deleteById(id) }
+            .onFailure { Log.e("Repo", "Fallo borrado en Firestore: ${it.message}") }
     }
 
-    // Implementación de la interfaz base
+    // Implementación de la interfaz base (por compatibilidad)
     override suspend fun deleteById(id: String) {
         deleteWithUser(id, "Desconocido")
     }

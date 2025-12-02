@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "292351674336",
+    "project_id": "denoiseapp-e4c99",
+    "storage_bucket": "denoiseapp-e4c99.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:292351674336:android:6fb47b775f51339b40cd85",
+        "android_client_info": {
+          "package_name": "com.denoise.denoiseapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt_uXiRLD-872uRM6bXRaTHLyMd24i6PE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
